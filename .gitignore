@@ -1,0 +1,157 @@
+﻿# -------------------------------------------------------
+# PROJECT INTERNALS — never push these
+# -------------------------------------------------------
+
+# The core build plan and architecture ideas
+universal-parser-build-plan.md
+
+# Local notes, scratch files, private planning docs
+notes/
+scratch/
+*.private.md
+*.local.md
+TODO.local.md
+
+# -------------------------------------------------------
+# CREDENTIALS & SECRETS — absolute never
+# -------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/
+config/local*.json
+config/local*.yaml
+config/local*.toml
+
+# -------------------------------------------------------
+# PYTHON
+# -------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.Python
+
+# uv
+.uv/
+uv.lock
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# -------------------------------------------------------
+# TESTING & COVERAGE
+# -------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.coveragerc
+.hypothesis/
+.tox/
+
+# -------------------------------------------------------
+# EDITORS & IDEs
+# -------------------------------------------------------
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains (PyCharm, etc.)
+.idea/
+*.iml
+*.iws
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+Session.vim
+
+# Emacs
+*#
+.#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# -------------------------------------------------------
+# OS FILES
+# -------------------------------------------------------
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+.directory
+
+# -------------------------------------------------------
+# LOGS & RUNTIME
+# -------------------------------------------------------
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# -------------------------------------------------------
+# BENCHMARK OUTPUTS — generated, not source
+# -------------------------------------------------------
+benchmarks/results/
+benchmarks/*.json
+benchmarks/*.csv
+
+# -------------------------------------------------------
+# TEMPLATE / ADAPTIVE CACHE — runtime state, not source
+# -------------------------------------------------------
+universal_parser/adaptive/templates/
+templates/
+
+# -------------------------------------------------------
+# LARGE TEST FIXTURES — keep small samples, not real docs
+# -------------------------------------------------------
+# Uncomment if you have large fixture files you do not want pushed
+# tests/fixtures/**/*.pdf
+# tests/fixtures/**/*.docx
