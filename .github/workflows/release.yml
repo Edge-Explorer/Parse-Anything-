@@ -1,0 +1,18 @@
+﻿# Release workflow is not active yet — will be configured before v0.1.0 tag.
+# Requires PYPI_API_TOKEN secret to be set in GitHub repo settings.
+#
+# Placeholder to prevent GitHub Actions from erroring on an empty file.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release workflow not configured yet
+        run: echo "Release workflow will be configured before the v0.1.0 tag. Nothing to run yet."

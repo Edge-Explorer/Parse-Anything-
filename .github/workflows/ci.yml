@@ -1,0 +1,20 @@
+﻿# CI is not active yet — Phase 0 scaffold in progress.
+# This file will be properly configured in Phase 1 when
+# dependencies, tests, and the memory benchmark are ready.
+#
+# Placeholder to prevent GitHub Actions from erroring on an empty file.
+
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI not configured yet
+        run: echo "CI will be configured in Phase 1 (v0.1.0). Nothing to run yet."
