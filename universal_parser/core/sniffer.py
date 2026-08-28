@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import mimetypes
+import mimetypes   # Actually reads the file content 
 from enum import Enum, auto
 from pathlib import Path
 
