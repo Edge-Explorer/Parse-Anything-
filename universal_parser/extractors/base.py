@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
+from typing import ClassVar
 
 from universal_parser.core.schema import Element
 from universal_parser.core.sniffer import FileType
+
 
 class BaseExtractor(ABC):
     """
@@ -17,8 +19,9 @@ class BaseExtractor(ABC):
     Adding a new format = one new file inheriting this + one entry in router.py.
     Nothing else in core/ needs to change.
     """
-    supported_types: list[FileType]= []
-    
+
+    supported_types: ClassVar[list[FileType]] = []
+
     @abstractmethod
     def stream(self, path: str | Path) -> Iterator[Element]:
         """

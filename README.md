@@ -166,8 +166,7 @@ Document  (versioned output)
 Every extractor implements one method:
 
 ```python
-def stream(self, path: str) -> Iterator[Element]:
-    ...
+def stream(self, path: str) -> Iterator[Element]: ...
 ```
 
 Adding a new format means creating one new file in `extractors/` and one entry in `router.py`. Nothing else changes. Details: [docs/ADDING_A_FORMAT.md](docs/ADDING_A_FORMAT.md)
