@@ -58,7 +58,7 @@ class DocxExtractor(BaseExtractor):
                 # Paragraph element
                 if tag == qn("w:p"):
                     element= self._process_paragraph(
-                        Paragraph(child, doc.element.body)
+                        Paragraph(child, doc)
                     )
                     if element is not None:
                         yield element
@@ -66,7 +66,7 @@ class DocxExtractor(BaseExtractor):
                 # Table element
                 elif tag == qn("w:tbl"):
                     element= self._process_table(
-                        Table(child, doc.element.body)
+                        Table(child, doc)
                     )
                     if element is not None:
                         yield element
