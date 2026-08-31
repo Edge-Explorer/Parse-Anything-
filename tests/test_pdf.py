@@ -46,8 +46,11 @@ def test_pdf_elements_are_valid():
             "list_item",
             "code_block",
         )
-        assert element.text is not None
-        assert len(element.text.strip()) > 0
+        
+        # Table elements use data/markdown_repr, other types must have text
+        if element.type != "table":
+            assert element.text is not None
+            assert len(element.text.strip()) > 0
 
 
 def test_pdf_has_page_numbers():
