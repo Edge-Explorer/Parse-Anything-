@@ -17,6 +17,7 @@ dependencies = [
     "docx>=0.2.4",
     "pytest>=9.1.1",
     "ruff>=0.16.5",
+    "pyarrow>=25.0.1",
 ]
 
 [project.optional-dependencies]

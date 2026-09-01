@@ -103,7 +103,7 @@ def sniff(path: str | Path) -> FileType:
         file_type = _MIME_MAP.get(mime)
 
         # MIME was recognized but ambiguous — let extension break the tie
-        if file_type in (FileType.CSV, None):
+        if file_type in (FileType.CSV, FileType.HTML, None):
             ext_type = _EXT_MAP.get(ext)
             if ext_type is not None:
                 return ext_type
