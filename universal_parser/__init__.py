@@ -6,7 +6,8 @@ import universal_parser.extractors.office.xlsx_extractor
 # Import all extractors to trigger their @register decorators.
 # Without this, the router registry remains empty until the files are imported.
 import universal_parser.extractors.pdf.native
-import universal_parser.extractors.structured.csv_extractor  # noqa: F401
+import universal_parser.extractors.structured.csv_extractor
+import universal_parser.extractors.structured.json_xml_extractor  # noqa: F401
 
 # Import the main entry point to expose it at the root of the package
 from universal_parser.core.engine import parse
