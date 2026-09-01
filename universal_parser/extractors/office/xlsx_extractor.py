@@ -20,6 +20,7 @@ class XlsxExtractor(BaseExtractor):
         - Memory-safe streaming using read_only=True
         - Multiple sheets (each sheet is extracted as a Table element)
         - Converts formula cells to values automatically using data_only=True
+        - Forward-fills empty/merged header names
     """
 
     supported_types: ClassVar[list[FileType]] = [FileType.XLSX]
@@ -56,9 +57,21 @@ class XlsxExtractor(BaseExtractor):
                 if not rows:
                     continue
 
-                # The first row will act as the column headers
-                headers = rows[0]
-                data_rows = rows[1:]
+                # Clean headers: handle merged cells by filling empty header slots
+                raw_headers= rows[0]
+                headers= []
+                last_seen_header= ""
+                for idx, h in enumerate(raw_headers):
+                    if h:
+                        headers.append(h)
+                        last_seen_header= h
+                    elif last_seen_header:
+                        # Merged column continuation: e.g. "Q1 Revenue_2"
+                        headers.append(f"{last_seen_header}_col{idx+1}")
+                    else:
+                        headers.append(f"Column_{idx+1}")
+                
+                data_rows= rows[1:]
 
                 # Build a markdown representation of the spreadsheet
                 md_header = "| " + " | ".join(headers) + " |"
@@ -73,6 +86,7 @@ class XlsxExtractor(BaseExtractor):
                     text=f"Sheet: {sheet_name}",
                     data=TableData(headers=headers, rows=data_rows),
                     markdown_repr=markdown_repr,
+                    confidence= 1.0,
                 )
 
         except Exception:  # noqa: BLE001
