@@ -20,6 +20,7 @@ dependencies = [
     "pyarrow>=25.0.1",
     "selectolax>=0.4.11",
     "beautifulsoup4>=4.15.0",
+    "ebooklib>=0.20",
 ]
 
 [project.optional-dependencies]
