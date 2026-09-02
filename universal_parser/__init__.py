@@ -9,6 +9,7 @@ import universal_parser.extractors.pdf.native
 import universal_parser.extractors.structured.csv_extractor
 import universal_parser.extractors.structured.json_xml_extractor
 import universal_parser.extractors.structured.parquet_extractor
+import universal_parser.extractors.web.epub_extractor
 import universal_parser.extractors.web.html_extractor  # noqa: F401
 
 # Import the main entry point to expose it at the root of the package
