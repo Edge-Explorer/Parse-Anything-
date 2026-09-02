@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 from collections.abc import Iterator
+from pathlib import Path
 from typing import ClassVar
 
 import pyarrow.parquet as pq
@@ -10,6 +10,7 @@ from universal_parser.core.router import register
 from universal_parser.core.schema import Element, TableData
 from universal_parser.core.sniffer import FileType
 from universal_parser.extractors.base import BaseExtractor
+
 
 @register
 class ParquetExtractor(BaseExtractor):
