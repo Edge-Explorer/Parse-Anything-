@@ -18,6 +18,8 @@ dependencies = [
     "pytest>=9.1.1",
     "ruff>=0.16.5",
     "pyarrow>=25.0.1",
+    "selectolax>=0.4.11",
+    "beautifulsoup4>=4.15.0",
 ]
 
 [project.optional-dependencies]
