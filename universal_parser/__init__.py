@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import universal_parser.extractors.images.scan_extractor
 import universal_parser.extractors.office.docx_extractor
 import universal_parser.extractors.office.xlsx_extractor
 

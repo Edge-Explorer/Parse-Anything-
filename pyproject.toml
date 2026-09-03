@@ -21,6 +21,9 @@ dependencies = [
     "selectolax>=0.4.11",
     "beautifulsoup4>=4.15.0",
     "ebooklib>=0.20",
+    "rapidocr-onnxruntime>=1.4.4",
+    "opencv-python-headless>=5.0.0.93",
+    "pillow>=12.3.0",
 ]
 
 [project.optional-dependencies]
