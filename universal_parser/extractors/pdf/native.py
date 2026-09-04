@@ -7,6 +7,7 @@ from typing import ClassVar
 import fitz  # PyMuPDF
 import numpy as np
 import pdfplumber
+from rapidocr_onnxruntime import RapidOCR
 
 from universal_parser.core.router import register
 from universal_parser.core.schema import BBox, Element
@@ -18,46 +19,51 @@ from universal_parser.extractors.pdf.tables import PDFTableExtractor
 @register
 class NativePDFExtractor(BaseExtractor):
     """
-    Extractor for native (searchable) PDF files.
-    
+    Extractor for PDF files (both native text and scanned pages).
+
     Handles:
         - Multi-column reading order via column-band clustering
         - Dynamic header hierarchy using font-size percentiles
         - Bordered & borderless table extraction integrated into the reading flow
+        - Automatic OCR fallback (via RapidOCR ONNX) for scanned pages with no text
     """
+
     supported_types: ClassVar[list[FileType]] = [FileType.PDF]
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._ocr = RapidOCR()
+
     def stream(self, path: str | Path) -> Iterator[Element]:
-        """Stream elements from a native PDF page by page."""
+        """Stream elements from a PDF page by page."""
         path_str = str(path)
-        
+
         try:
             doc = fitz.open(path_str)
-            # Open with pdfplumber for table extraction
             plumber_doc = pdfplumber.open(path_str)
         except Exception:  # noqa: BLE001
-            # Corrupted PDF
             return
 
         try:
-            # Step 1: Collect font sizes from the first few pages (max 10)
+            # Collect font sizes for header hierarchy
             font_sizes = self._collect_font_sizes(doc, max_pages=10)
             thresholds = self._compute_header_thresholds(font_sizes)
 
-            # Step 2: Process each page
             for page_num in range(len(doc)):
                 page = doc[page_num]
                 page_width = page.rect.width
-                
+
                 # A. Extract tables and their bounding boxes using pdfplumber
-                plumber_page = plumber_doc.pages[page_num]
-                table_extractor = PDFTableExtractor(plumber_page)
-                page_tables = table_extractor.extract_tables()
-                
-                # Keep track of table bounding boxes to filter out overlapping text
+                try:
+                    plumber_page = plumber_doc.pages[page_num]
+                    table_extractor = PDFTableExtractor(plumber_page)
+                    page_tables = table_extractor.extract_tables()
+                except Exception:  # noqa: BLE001
+                    page_tables = []
+
                 table_bboxes = [table["bbox"] for table in page_tables]
 
-                # B. Extract text spans using PyMuPDF (fitz)
+                # B. Extract native text spans
                 text_page = page.get_text("dict")
                 spans = []
                 for block in text_page.get("blocks", []):
@@ -68,13 +74,11 @@ class NativePDFExtractor(BaseExtractor):
                             text = span.get("text", "").strip()
                             if not text:
                                 continue
-                            
-                            bbox = span.get("bbox")  # (x0, y0, x1, y1)
-                            
-                            # Filter out text spans that fall inside any table boundary
+
+                            bbox = span.get("bbox")
                             if self._is_inside_any_bbox(bbox, table_bboxes):
                                 continue
-                                
+
                             spans.append({
                                 "is_table": False,
                                 "text": text,
@@ -82,7 +86,7 @@ class NativePDFExtractor(BaseExtractor):
                                 "bbox": bbox,
                             })
 
-                # C. Wrap extracted tables as sortable elements
+                # C. Wrap extracted tables
                 for table in page_tables:
                     spans.append({
                         "is_table": True,
@@ -91,18 +95,19 @@ class NativePDFExtractor(BaseExtractor):
                         "bbox": table["bbox"],
                     })
 
+                # D. SCANNED PAGE FALLBACK: If page has NO native text or tables, run OCR
                 if not spans:
+                    yield from self._ocr_scanned_page(page, page_num + 1)
                     continue
 
-                # Step 3: Sort both text and tables together in natural reading order
+                # Step 3: Sort in natural reading order
                 ordered_elements = self._sort_reading_order(spans, page_width)
 
                 # Step 4: Yield sorted elements
                 for el in ordered_elements:
                     bbox_coords = el["bbox"]
-                    
+
                     if el["is_table"]:
-                        # Pre-render markdown representation of the table
                         headers = el["table_data"].headers
                         rows = el["table_data"].rows
                         md_header = "| " + " | ".join(headers) + " |"
@@ -117,19 +122,19 @@ class NativePDFExtractor(BaseExtractor):
                                 x0=bbox_coords[0],
                                 y0=bbox_coords[1],
                                 x1=bbox_coords[2],
-                                y1=bbox_coords[3]
+                                y1=bbox_coords[3],
                             ),
                             data=el["table_data"],
                             markdown_repr=markdown_repr,
-                            confidence=el["confidence"]
+                            confidence=el["confidence"],
                         )
                     else:
                         size = el["size"]
                         text = el["text"]
-                        
+
                         el_type = "paragraph"
                         level = None
-                        
+
                         if size >= thresholds["h1"]:
                             el_type = "heading"
                             level = 1
@@ -139,7 +144,7 @@ class NativePDFExtractor(BaseExtractor):
                         elif size >= thresholds["h3"]:
                             el_type = "heading"
                             level = 3
-                            
+
                         yield Element(
                             type=el_type,
                             level=level,
@@ -149,19 +154,60 @@ class NativePDFExtractor(BaseExtractor):
                                 x0=bbox_coords[0],
                                 y0=bbox_coords[1],
                                 x1=bbox_coords[2],
-                                y1=bbox_coords[3]
-                            )
+                                y1=bbox_coords[3],
+                            ),
                         )
         finally:
             doc.close()
             plumber_doc.close()
 
+    def _ocr_scanned_page(self, page: fitz.Page, page_num: int) -> Iterator[Element]:
+        """Render a scanned PDF page to an image and run RapidOCR."""
+        try:
+            pix= page.get_pixmap(dpi=200)
+            # Convert pixmap samples to numpy array for OpenCV/RapidOCR
+            img_np = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+            if pix.n == 4:
+                # RGBA to RGB
+                img_np = img_np[:, :, :3]
+
+            ocr_results, _ = self._ocr(img_np)
+            if not ocr_results:
+                return
+
+            # Scaling factor between rendered pixmap and original PDF points
+            scale_x = page.rect.width / pix.width
+            scale_y = page.rect.height / pix.height
+
+            for item in ocr_results:
+                dt_boxes, text, score = item
+                clean_text = text.strip()
+                if not clean_text:
+                    continue
+
+                pts = np.array(dt_boxes, dtype=np.float32)
+                x0 = float(np.min(pts[:, 0])) * scale_x
+                y0 = float(np.min(pts[:, 1])) * scale_y
+                x1 = float(np.max(pts[:, 0])) * scale_x
+                y1 = float(np.max(pts[:, 1])) * scale_y
+
+                yield Element(
+                    type="paragraph",
+                    text=clean_text,
+                    page=page_num,
+                    bbox=BBox(x0=x0, y0=y0, x1=x1, y1=y1),
+                    markdown_repr=clean_text,
+                    confidence=round(float(score), 3),
+                )
+        except Exception:  # noqa: BLE001
+            return
+
     def _is_inside_any_bbox(
-        self, 
-        span_bbox: tuple[float, float, float, float], 
-        table_bboxes: list[tuple[float, float, float, float]]
+        self,
+        span_bbox: tuple[float, float, float, float],
+        table_bboxes: list[tuple[float, float, float, float]],
     ) -> bool:
-        """Check if a text span falls inside any table bounding box (with 2-point padding safety)."""
+        """Check if a text span falls inside any table bounding box."""
         sx0, sy0, sx1, sy1 = span_bbox
         for tx0, ty0, tx1, ty1 in table_bboxes:
             if sx0 >= (tx0 - 2) and sy0 >= (ty0 - 2) and sx1 <= (tx1 + 2) and sy1 <= (ty1 + 2):
@@ -189,31 +235,31 @@ class NativePDFExtractor(BaseExtractor):
         """Compute font size cutoffs for H1, H2, H3 using percentiles."""
         if not font_sizes:
             return {"h1": 16.0, "h2": 14.0, "h3": 12.0}
-            
+
         arr = np.array(font_sizes)
         h1_val = float(np.percentile(arr, 95))
         h2_val = float(np.percentile(arr, 85))
         h3_val = float(np.percentile(arr, 75))
-        
+
         median = float(np.median(arr))
-        
+
         h1_val = max(h1_val, median + 3.0)
         h2_val = max(h2_val, median + 1.5)
         h3_val = max(h3_val, median + 0.5)
-        
+
         return {"h1": h1_val, "h2": h2_val, "h3": h3_val}
 
     def _sort_reading_order(self, elements: list[dict], page_width: float) -> list[dict]:
-        """Sort elements to preserve natural reading order (supports multi-column layouts)."""
+        """Sort elements to preserve natural reading order."""
         if len(elements) < 5:
             return sorted(elements, key=lambda e: (e["bbox"][1], e["bbox"][0]))
 
         midpoint = page_width / 2.0
-        
+
         left_col = []
         right_col = []
         spans_spanning_middle = []
-        
+
         for el in elements:
             x0, _, x1, _ = el["bbox"]
             if x1 <= midpoint:
@@ -222,14 +268,14 @@ class NativePDFExtractor(BaseExtractor):
                 right_col.append(el)
             else:
                 spans_spanning_middle.append(el)
-                
+
         key_func = lambda e: (e["bbox"][1], e["bbox"][0])
         left_sorted = sorted(left_col, key=key_func)
         right_sorted = sorted(right_col, key=key_func)
-        
+
         if len(left_sorted) > 2 and len(right_sorted) > 2:
             all_sorted = sorted(spans_spanning_middle + left_sorted + right_sorted, key=key_func)
         else:
             all_sorted = sorted(elements, key=key_func)
-            
+
         return all_sorted
