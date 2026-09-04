@@ -104,7 +104,7 @@ class MailExtractor(BaseExtractor):
     def _stream_mbox(self, path: Path) -> Iterator[Element]:
         try:
             mbox = mailbox.mbox(str(path))
-            for _, msg in mbox.items():
+            for msg in mbox.values():
                 yield from self._process_email_message(msg)
         except Exception:  # noqa: BLE001
             return
