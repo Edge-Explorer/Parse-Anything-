@@ -50,3 +50,6 @@ build-backend= "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages=["universal_parser"]
+
+[tool.pytest.ini_options]
+filterwarnings= ["ignore::UserWarning:openpyxl."]
