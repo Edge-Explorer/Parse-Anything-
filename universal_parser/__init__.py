@@ -18,6 +18,7 @@ import universal_parser.extractors.web.html_extractor  # noqa: F401
 
 # Import the main entry point to expose it at the root of the package
 from universal_parser.core.engine import parse
+from universal_parser.exports.to_markdown import to_markdown
 
 # Define what is exposed when doing: from universal_parser import *
-__all__ = ["parse"]
+__all__ = ["parse", "to_markdown"]
