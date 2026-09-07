@@ -53,3 +53,8 @@ packages=["universal_parser"]
 
 [tool.pytest.ini_options]
 filterwarnings= ["ignore::UserWarning:openpyxl."]
+
+[dependency-groups]
+dev = [
+    "psutil>=7.2.2",
+]

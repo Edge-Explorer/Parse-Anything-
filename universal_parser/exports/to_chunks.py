@@ -70,7 +70,7 @@ def to_chunks(doc: Document, max_tokens: int= 512, overlap_tokens: int= 50,) -> 
             current_elements= []
             current_types= []
             current_pages= []
-            current_tokens= []
+            current_tokens= 0
             
         # 4. Append element to current buffer
         current_elements.append(el_text)
