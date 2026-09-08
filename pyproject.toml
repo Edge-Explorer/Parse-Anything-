@@ -1,5 +1,5 @@
 [project]
-name = "universal-parser"
+name = "universal-doc-parser"
 version = "1.0.0"
 description = "A zero-GPU, CPU-only, 100% commercially permissive document ingestion engine for RAG pipelines."
 readme = "README.md"
