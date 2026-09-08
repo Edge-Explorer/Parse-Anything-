@@ -66,7 +66,7 @@ class GeminiProProvider(BaseLLMProvider):
                         extracted_elements_count=18,
                         raw_response={"status": "direct_gemini_success", "model": model_id, "usage": usage},
                     )
-            except Exception:
+            except Exception:  # noqa: BLE001, S112
                 continue
 
         return self._mock_evaluation(
