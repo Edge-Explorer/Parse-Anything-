@@ -181,7 +181,9 @@ def test_adaptive_tuner_guardrails() -> None:
     base_cfg = ParserConfig(column_gap_threshold=15.0)
 
     # Aggressively trigger merged_columns 50 times
-    extreme_signals = [FeedbackSignal(signal_type="merged_columns", severity=2.0) for _ in range(50)]
+    extreme_signals = [
+        FeedbackSignal(signal_type="merged_columns", severity=2.0) for _ in range(50)
+    ]
     tuned = tuner.tune(base_cfg, extreme_signals)
 
     # Must not drop below guardrail minimum of 10.0

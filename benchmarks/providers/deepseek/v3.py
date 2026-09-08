@@ -11,4 +11,4 @@ class DeepSeekV3Provider(BaseLLMProvider):
     cost_per_1k_output_tokens = 0.00028
     base_mock_latency_ms = 980.0
     base_mock_table_score = 0.91
-    base_mock_rag_score = 0.92
+    base_mock_rag_score = 0.92

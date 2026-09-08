@@ -62,9 +62,7 @@ class NativePDFExtractor(BaseExtractor):
                 table_bboxes = [table["bbox"] for table in page_tables]
 
                 # B. Extract native text words/spans
-                words = plumber_page.extract_words(
-                    extra_attrs=["size"], keep_blank_chars=False
-                )
+                words = plumber_page.extract_words(extra_attrs=["size"], keep_blank_chars=False)
                 spans = []
 
                 # Group adjacent words on same line into phrase spans
@@ -91,48 +89,57 @@ class NativePDFExtractor(BaseExtractor):
                         else:
                             span_text = " ".join(w["text"] for w in current_line).strip()
                             if span_text:
-                                spans.append({
-                                    "is_table": False,
-                                    "text": span_text,
-                                    "size": round(float(current_line[0].get("size", 10.0)), 1),
-                                    "bbox": (
-                                        float(current_line[0]["x0"]),
-                                        float(min(w["top"] for w in current_line)),
-                                        float(current_line[-1]["x1"]),
-                                        float(max(w["bottom"] for w in current_line)),
-                                    ),
-                                })
+                                spans.append(
+                                    {
+                                        "is_table": False,
+                                        "text": span_text,
+                                        "size": round(float(current_line[0].get("size", 10.0)), 1),
+                                        "bbox": (
+                                            float(current_line[0]["x0"]),
+                                            float(min(w["top"] for w in current_line)),
+                                            float(current_line[-1]["x1"]),
+                                            float(max(w["bottom"] for w in current_line)),
+                                        ),
+                                    }
+                                )
                             current_line = [word]
 
                 if current_line:
                     span_text = " ".join(w["text"] for w in current_line).strip()
                     if span_text:
-                        spans.append({
-                            "is_table": False,
-                            "text": span_text,
-                            "size": round(float(current_line[0].get("size", 10.0)), 1),
-                            "bbox": (
-                                float(current_line[0]["x0"]),
-                                float(min(w["top"] for w in current_line)),
-                                float(current_line[-1]["x1"]),
-                                float(max(w["bottom"] for w in current_line)),
-                            ),
-                        })
+                        spans.append(
+                            {
+                                "is_table": False,
+                                "text": span_text,
+                                "size": round(float(current_line[0].get("size", 10.0)), 1),
+                                "bbox": (
+                                    float(current_line[0]["x0"]),
+                                    float(min(w["top"] for w in current_line)),
+                                    float(current_line[-1]["x1"]),
+                                    float(max(w["bottom"] for w in current_line)),
+                                ),
+                            }
+                        )
 
                 # C. Wrap extracted tables
                 for table in page_tables:
-                    spans.append({
-                        "is_table": True,
-                        "table_data": table["data"],
-                        "confidence": table["confidence"],
-                        "bbox": table["bbox"],
-                    })
+                    spans.append(
+                        {
+                            "is_table": True,
+                            "table_data": table["data"],
+                            "confidence": table["confidence"],
+                            "bbox": table["bbox"],
+                        }
+                    )
 
                 # D. SCANNED PAGE FALLBACK: If page has NO native text or tables, run OCR
                 if not spans:
                     if page_num < len(pdfium_doc):
                         yield from self._ocr_scanned_page(
-                            pdfium_doc[page_num], page_num + 1, page_width, float(plumber_page.height)
+                            pdfium_doc[page_num],
+                            page_num + 1,
+                            page_width,
+                            float(plumber_page.height),
                         )
                     continue
 
@@ -280,7 +287,7 @@ class NativePDFExtractor(BaseExtractor):
         return {"h1": h1_val, "h2": h2_val, "h3": h3_val}
 
     def _sort_reading_order(self, elements: list[dict], page_width: float) -> list[dict]:
-        """Sort elements to preserve natural reading order."""
+        """Sort elements to preserve natural multi-column reading order."""
         if len(elements) < 5:
             return sorted(elements, key=lambda e: (e["bbox"][1], e["bbox"][0]))
 
@@ -288,26 +295,37 @@ class NativePDFExtractor(BaseExtractor):
 
         left_col = []
         right_col = []
-        spans_spanning_middle = []
+        full_width = []
 
         for el in elements:
             x0, _, x1, _ = el["bbox"]
-            if x1 <= midpoint:
+            if x1 <= (midpoint + 15):
                 left_col.append(el)
-            elif x0 >= midpoint:
+            elif x0 >= (midpoint - 15):
                 right_col.append(el)
             else:
-                spans_spanning_middle.append(el)
+                full_width.append(el)
 
-        key_func = lambda e: (e["bbox"][1], e["bbox"][0])
-        left_sorted = sorted(left_col, key=key_func)
-        right_sorted = sorted(right_col, key=key_func)
+        def key_y(e):
+            return (e["bbox"][1], e["bbox"][0])
 
-        if len(left_sorted) > 2 and len(right_sorted) > 2:
-            all_sorted = sorted(
-                spans_spanning_middle + left_sorted + right_sorted, key=key_func
+        left_sorted = sorted(left_col, key=key_y)
+        right_sorted = sorted(right_col, key=key_y)
+
+        if len(left_sorted) >= 2 and len(right_sorted) >= 2:
+            col_top = min(left_sorted[0]["bbox"][1], right_sorted[0]["bbox"][1])
+            col_bottom = max(left_sorted[-1]["bbox"][3], right_sorted[-1]["bbox"][3])
+
+            top_full = [e for e in full_width if e["bbox"][3] <= col_top + 10]
+            bottom_full = [e for e in full_width if e["bbox"][1] >= col_bottom - 10]
+            mid_full = [e for e in full_width if e not in top_full and e not in bottom_full]
+
+            return (
+                sorted(top_full, key=key_y)
+                + sorted(mid_full, key=key_y)
+                + left_sorted
+                + right_sorted
+                + sorted(bottom_full, key=key_y)
             )
-        else:
-            all_sorted = sorted(elements, key=key_func)
 
-        return all_sorted
+        return sorted(elements, key=key_y)

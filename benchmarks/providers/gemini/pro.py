@@ -64,7 +64,11 @@ class GeminiProProvider(BaseLLMProvider):
                         table_score=0.97,
                         rag_faithfulness_score=0.98,
                         extracted_elements_count=18,
-                        raw_response={"status": "direct_gemini_success", "model": model_id, "usage": usage},
+                        raw_response={
+                            "status": "direct_gemini_success",
+                            "model": model_id,
+                            "usage": usage,
+                        },
                     )
             except Exception:  # noqa: BLE001, S112
                 continue

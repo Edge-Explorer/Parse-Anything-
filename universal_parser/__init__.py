@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__version__ = "1.0.0"
+
 import universal_parser.extractors.images.scan_extractor
 import universal_parser.extractors.mail.mail_extractor
 import universal_parser.extractors.office.docx_extractor
@@ -23,4 +25,4 @@ from universal_parser.exports.to_graph import to_graph
 from universal_parser.exports.to_markdown import to_markdown
 
 # Define what is exposed when doing: from universal_parser import *
-__all__ = ["parse", "to_chunks", "to_graph", "to_markdown"]
+__all__ = ["__version__", "parse", "to_chunks", "to_graph", "to_markdown"]

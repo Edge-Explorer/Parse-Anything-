@@ -8,7 +8,12 @@ def test_to_markdown_export():
     doc = Document(
         metadata=DocumentMetadata(file_name="sample.pdf", file_type="pdf"),
         content_tree=[
-            Element(type="heading", level=1, text="Executive Summary", markdown_repr="# Executive Summary"),
+            Element(
+                type="heading",
+                level=1,
+                text="Executive Summary",
+                markdown_repr="# Executive Summary",
+            ),
             Element(type="paragraph", text="This is an automated parsing report."),
             Element(
                 type="table",
@@ -30,7 +35,11 @@ def test_to_chunks_hierarchical_context():
         content_tree=[
             Element(type="heading", level=1, text="Architecture Overview"),
             Element(type="heading", level=2, text="Storage Subsystem"),
-            Element(type="paragraph", text="We use S3 for blob storage and PostgreSQL for metadata.", page=1),
+            Element(
+                type="paragraph",
+                text="We use S3 for blob storage and PostgreSQL for metadata.",
+                page=1,
+            ),
         ],
     )
 

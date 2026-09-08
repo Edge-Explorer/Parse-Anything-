@@ -46,9 +46,7 @@ class XlsxExtractor(BaseExtractor):
                 rows = []
                 for row in sheet.iter_rows(values_only=True):
                     # Clean the row data (convert None values to empty strings)
-                    clean_row = [
-                        str(cell).strip() if cell is not None else "" for cell in row
-                    ]
+                    clean_row = [str(cell).strip() if cell is not None else "" for cell in row]
 
                     # Skip completely empty rows
                     if any(clean_row):
@@ -58,20 +56,20 @@ class XlsxExtractor(BaseExtractor):
                     continue
 
                 # Clean headers: handle merged cells by filling empty header slots
-                raw_headers= rows[0]
-                headers= []
-                last_seen_header= ""
+                raw_headers = rows[0]
+                headers = []
+                last_seen_header = ""
                 for idx, h in enumerate(raw_headers):
                     if h:
                         headers.append(h)
-                        last_seen_header= h
+                        last_seen_header = h
                     elif last_seen_header:
                         # Merged column continuation: e.g. "Q1 Revenue_2"
-                        headers.append(f"{last_seen_header}_col{idx+1}")
+                        headers.append(f"{last_seen_header}_col{idx + 1}")
                     else:
-                        headers.append(f"Column_{idx+1}")
-                
-                data_rows= rows[1:]
+                        headers.append(f"Column_{idx + 1}")
+
+                data_rows = rows[1:]
 
                 # Build a markdown representation of the spreadsheet
                 md_header = "| " + " | ".join(headers) + " |"
@@ -86,7 +84,7 @@ class XlsxExtractor(BaseExtractor):
                     text=f"Sheet: {sheet_name}",
                     data=TableData(headers=headers, rows=data_rows),
                     markdown_repr=markdown_repr,
-                    confidence= 1.0,
+                    confidence=1.0,
                 )
 
         except Exception:  # noqa: BLE001

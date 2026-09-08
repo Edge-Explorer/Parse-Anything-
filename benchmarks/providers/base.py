@@ -121,11 +121,18 @@ class BaseLLMProvider(ABC):
                     table_score=0.94,
                     rag_faithfulness_score=0.96,
                     extracted_elements_count=15,
-                    raw_response={"status": "live_success", "model": openrouter_model_id, "usage": usage},
+                    raw_response={
+                        "status": "live_success",
+                        "model": openrouter_model_id,
+                        "usage": usage,
+                    },
                 )
         except Exception as err:  # noqa: BLE001
             mock = self._mock_evaluation(
-                doc_path, self.base_mock_latency_ms, self.base_mock_table_score, self.base_mock_rag_score
+                doc_path,
+                self.base_mock_latency_ms,
+                self.base_mock_table_score,
+                self.base_mock_rag_score,
             )
             mock.raw_response = {"status": "error_fallback", "error": str(err)}
             return mock
@@ -154,4 +161,4 @@ class BaseLLMProvider(ABC):
             rag_faithfulness_score=round(faithfulness, 3),
             extracted_elements_count=int(file_size_kb * 2.5) + 10,
             raw_response={"status": "dry_run", "dry_run": self.dry_run},
-        )
+        )
