@@ -5,30 +5,65 @@ import time
 import tracemalloc
 from pathlib import Path
 
-import fitz  # PyMuPDF
 import psutil
 
 from universal_parser.core.engine import parse
 from universal_parser.exports.to_chunks import to_chunks
 
 
-def generate_large_synthetic_pdf(output_path: Path, num_pages: int= 100) -> Path:
-    """Generate a multi-page synthetic PDF with headings and paragraphs."""
-    doc= fitz.open()
+def generate_large_synthetic_pdf(output_path: Path, num_pages: int = 100) -> Path:
+    """Generate a multi-page synthetic PDF with headings and paragraphs using standard PDF spec."""
+    objects = []
+    page_obj_ids = []
+
+    # Obj 1: Font
+    objects.append("1 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
+
+    # For each page, create Content Stream and Page Object
     for i in range(1, num_pages + 1):
-        page= doc.new_page(width=595, height= 842)   # A4 size
-        # Add heading
-        page.insert_text((50, 60), f"Chapter {i}: Scalability & Performance", fontsize= 18)
-        # Add paragraphs
+        content = (
+            f"BT /F1 18 Tf 50 780 Td (Chapter {i}: Scalability and Performance) Tj ET\n"
+        )
         for p_idx in range(5):
-            y_pos= 100 + p_idx * 50
-            page.insert_text(
-                (50, y_pos),
-                f"Paragraph {p_idx+1}: Testing memory-safe streaming extraction on CPU without leaks.",
-                fontsize= 11,
-            )
-    doc.save(str(output_path))
-    doc.close()
+            y_pos = 720 - p_idx * 40
+            content += f"BT /F1 11 Tf 50 {y_pos} Td (Paragraph {p_idx+1}: Testing memory safe streaming extraction on CPU without leaks.) Tj ET\n"
+
+        content_bytes = content.encode("latin1")
+        content_id = len(objects) + 2  # account for pages root obj
+        objects.append(
+            f"{content_id} 0 obj\n<< /Length {len(content_bytes)} >>\nstream\n{content}endstream\nendobj\n"
+        )
+
+        page_id = len(objects) + 2
+        page_obj_ids.append(page_id)
+        objects.append(
+            f"{page_id} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents {content_id} 0 R >>\nendobj\n"
+        )
+
+    # Pages root (Obj 2)
+    kids_str = " ".join(f"{pid} 0 R" for pid in page_obj_ids)
+    pages_obj = f"2 0 obj\n<< /Type /Pages /Kids [{kids_str}] /Count {num_pages} >>\nendobj\n"
+    objects.insert(1, pages_obj)
+
+    # Catalog
+    catalog_id = len(objects) + 1
+    objects.append(f"{catalog_id} 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
+
+    # Build PDF with xref table
+    body = "%PDF-1.4\n"
+    xref_offsets = []
+    for obj in objects:
+        xref_offsets.append(len(body.encode("latin1")))
+        body += obj
+
+    xref_pos = len(body.encode("latin1"))
+    body += f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n"
+    for offset in xref_offsets:
+        body += f"{offset:010d} 00000 n \n"
+
+    body += f"trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n"
+
+    output_path.write_bytes(body.encode("latin1"))
     return output_path
     
 def run_memory_benchmark(max_allowed_mb: float= 250.0) -> bool:
