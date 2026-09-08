@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="280" alt="universal-parser logo" />
+  <img src="assets/banner.png" width="100%" alt="Parse-Anything Anime Manga Banner" />
 </p>
 
 # universal-parser
