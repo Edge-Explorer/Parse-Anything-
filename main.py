@@ -156,7 +156,8 @@ with gr.Blocks(
             schema_output,
             metrics_output,
         ],
+        api_name=False,
     )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(show_api=False)
