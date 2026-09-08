@@ -4,11 +4,10 @@
 
 # universal-parser
 
-[![CI](https://github.com/your-username/Parse-Anything-/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/Parse-Anything-/actions/workflows/ci.yml)
+[![CI](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml/badge.svg)](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/universal-parser)](https://pypi.org/project/universal-parser/)
 [![Python](https://img.shields.io/pypi/pyversions/universal-parser)](https://pypi.org/project/universal-parser/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Zero AGPL](https://img.shields.io/badge/License-Zero--AGPL-brightgreen.svg)](LICENSE)
 [![Memory: <250MB](https://img.shields.io/badge/Memory_Limit-%3C250MB_RSS-success.svg)](#memory-and-performance)
 
 A production-grade, zero-GPU, CPU-only document ingestion engine for RAG pipelines and AI agents. Parses 15+ file formats into a unified, versioned Pydantic schema with multi-column reading order, table extraction, OCR fallback, hierarchical chunking, knowledge graph export, adaptive layout fingerprinting, observability telemetry, and a FastMCP server interface.
