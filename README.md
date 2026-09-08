@@ -5,8 +5,8 @@
 # UNIVERSAL PARSER
 
 [![CI](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml/badge.svg)](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/universal-parser)](https://pypi.org/project/universal-parser/)
-[![Python](https://img.shields.io/pypi/pyversions/universal-parser)](https://pypi.org/project/universal-parser/)
+[![PyPI](https://img.shields.io/pypi/v/universal-doc-parser)](https://pypi.org/project/universal-doc-parser/)
+[![Python](https://img.shields.io/pypi/pyversions/universal-doc-parser)](https://pypi.org/project/universal-doc-parser/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Memory: <250MB](https://img.shields.io/badge/Memory_Limit-%3C250MB_RSS-success.svg)](#memory-and-performance)
 
