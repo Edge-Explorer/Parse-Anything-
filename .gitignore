@@ -13,6 +13,7 @@ scratch/
 TODO.local.md
 PARSE ANYTHING.png
 *.png
+!assets/logo.png
 !tests/fixtures/**/*.png
 
 

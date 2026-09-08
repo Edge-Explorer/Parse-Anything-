@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" width="280" alt="universal-parser logo" />
+</p>
+
 # universal-parser
 
 [![CI](https://github.com/your-username/Parse-Anything-/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/Parse-Anything-/actions/workflows/ci.yml)
