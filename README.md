@@ -2,7 +2,7 @@
   <img src="assets/banner.png" width="100%" style="max-width: 850px; border-radius: 8px;" alt="Parse-Anything Anime Manga Banner" />
 </p>
 
-# universal-parser
+# UNIVERSAL PARSER
 
 [![CI](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml/badge.svg)](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/universal-parser)](https://pypi.org/project/universal-parser/)
