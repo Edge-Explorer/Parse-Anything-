@@ -11,6 +11,10 @@ scratch/
 *.private.md
 *.local.md
 TODO.local.md
+PARSE ANYTHING.png
+*.png
+!tests/fixtures/**/*.png
+
 
 # -------------------------------------------------------
 # CREDENTIALS & SECRETS — absolute never
