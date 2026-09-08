@@ -1,7 +1,10 @@
-﻿import time
 import json
+import time
+
 import gradio as gr
-from universal_parser import parse, to_markdown, to_chunks, to_graph
+
+from universal_parser import parse, to_chunks, to_graph, to_markdown
+
 
 def process_document(file_obj, max_chunk_tokens):
     if file_obj is None:
@@ -81,6 +84,7 @@ def process_document(file_obj, max_chunk_tokens):
         error_msg = f"### Extraction Error\nAn error occurred while processing the file: `{str(e)}`"
         return error_msg, "[]", "{}", "{}", "Processing failed."
 
+
 # Build Gradio UI
 with gr.Blocks(
     title="Universal Document Parser — Zero-GPU RAG Ingestion",
@@ -100,9 +104,24 @@ with gr.Blocks(
             file_input = gr.File(
                 label="Upload Document",
                 file_types=[
-                    ".pdf", ".docx", ".xlsx", ".pptx", ".html", ".epub",
-                    ".csv", ".tsv", ".parquet", ".json", ".xml", ".eml",
-                    ".msg", ".mbox", ".png", ".jpg", ".jpeg", ".webp"
+                    ".pdf",
+                    ".docx",
+                    ".xlsx",
+                    ".pptx",
+                    ".html",
+                    ".epub",
+                    ".csv",
+                    ".tsv",
+                    ".parquet",
+                    ".json",
+                    ".xml",
+                    ".eml",
+                    ".msg",
+                    ".mbox",
+                    ".png",
+                    ".jpg",
+                    ".jpeg",
+                    ".webp",
                 ],
             )
             chunk_token_slider = gr.Slider(

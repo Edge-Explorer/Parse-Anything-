@@ -423,7 +423,7 @@ from universal_parser.adaptive import compute_fingerprint
 
 doc = parse("invoice_template.pdf")
 fp = compute_fingerprint(doc)
-print(fp.hash_digest)   # SHA-256 hex string
+print(fp.hash_digest)  # SHA-256 hex string
 print(fp.spatial_grid)  # 10x10 occupancy matrix
 ```
 

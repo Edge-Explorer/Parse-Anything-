@@ -94,9 +94,7 @@ from universal_parser.extractors.images.scan_extractor import ImageScanExtractor
 
 extractor = ImageScanExtractor()
 high_confidence_lines = [
-    element.text
-    for element in extractor.stream("photo.jpg")
-    if element.confidence >= 0.85
+    element.text for element in extractor.stream("photo.jpg") if element.confidence >= 0.85
 ]
 print("\n".join(high_confidence_lines))
 ```
