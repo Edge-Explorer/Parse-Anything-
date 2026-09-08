@@ -1,4 +1,4 @@
-﻿name: Sync to Hugging Face Spaces
+name: Sync to Hugging Face Spaces
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
           app_file: main.py
           pinned: false
           license: mit
-          short_description: Zero-GPU, CPU-only document ingestion engine for RAG pipelines & AI agents.
+          short_description: Zero-GPU CPU document ingestion engine for RAG pipelines.
           ---
 
           EOF
