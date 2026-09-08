@@ -2331,7 +2331,7 @@ wheels = [
 ]
 
 [[package]]
-name = "universal-parser"
+name = "universal-doc-parser"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [
