@@ -1,0 +1,47 @@
+﻿name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare Hugging Face README Header
+        run: |
+          cat << 'EOF' > hf_header.txt
+          ---
+          title: Universal Document Parser
+          emoji: 📄
+          colorFrom: blue
+          colorTo: indigo
+          sdk: gradio
+          sdk_version: 6.26.0
+          app_file: main.py
+          pinned: false
+          license: mit
+          short_description: Zero-GPU, CPU-only document ingestion engine for RAG pipelines & AI agents.
+          ---
+
+          EOF
+          cat hf_header.txt README.md > README_HF.md
+          mv README_HF.md README.md
+          rm hf_header.txt
+
+      - name: Push to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git remote add hf https://Edge-Explorer:$HF_TOKEN@huggingface.co/spaces/Edge-Explorer/universal-doc-parser || true
+          git add README.md main.py pyproject.toml
+          git commit -m "sync: update Hugging Face Space demo" || true
+          git push -f hf main
