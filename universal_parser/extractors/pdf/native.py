@@ -4,9 +4,9 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import ClassVar
 
-import fitz  # PyMuPDF
 import numpy as np
 import pdfplumber
+import pypdfium2 as pdfium
 from rapidocr_onnxruntime import RapidOCR
 
 from universal_parser.core.router import register
@@ -18,8 +18,7 @@ from universal_parser.extractors.pdf.tables import PDFTableExtractor
 
 @register
 class NativePDFExtractor(BaseExtractor):
-    """
-    Extractor for PDF files (both native text and scanned pages).
+    """Extractor for PDF files (both native text and scanned pages).
 
     Handles:
         - Multi-column reading order via column-band clustering
@@ -39,23 +38,22 @@ class NativePDFExtractor(BaseExtractor):
         path_str = str(path)
 
         try:
-            doc = fitz.open(path_str)
             plumber_doc = pdfplumber.open(path_str)
+            pdfium_doc = pdfium.PdfDocument(path_str)
         except Exception:  # noqa: BLE001
             return
 
         try:
             # Collect font sizes for header hierarchy
-            font_sizes = self._collect_font_sizes(doc, max_pages=10)
+            font_sizes = self._collect_font_sizes(plumber_doc, max_pages=10)
             thresholds = self._compute_header_thresholds(font_sizes)
 
-            for page_num in range(len(doc)):
-                page = doc[page_num]
-                page_width = page.rect.width
+            for page_num in range(len(plumber_doc.pages)):
+                plumber_page = plumber_doc.pages[page_num]
+                page_width = float(plumber_page.width)
 
                 # A. Extract tables and their bounding boxes using pdfplumber
                 try:
-                    plumber_page = plumber_doc.pages[page_num]
                     table_extractor = PDFTableExtractor(plumber_page)
                     page_tables = table_extractor.extract_tables()
                 except Exception:  # noqa: BLE001
@@ -63,28 +61,63 @@ class NativePDFExtractor(BaseExtractor):
 
                 table_bboxes = [table["bbox"] for table in page_tables]
 
-                # B. Extract native text spans
-                text_page = page.get_text("dict")
+                # B. Extract native text words/spans
+                words = plumber_page.extract_words(
+                    extra_attrs=["size"], keep_blank_chars=False
+                )
                 spans = []
-                for block in text_page.get("blocks", []):
-                    if block.get("type") != 0:
+
+                # Group adjacent words on same line into phrase spans
+                current_line: list[dict] = []
+                for word in words:
+                    bbox = (
+                        float(word["x0"]),
+                        float(word["top"]),
+                        float(word["x1"]),
+                        float(word["bottom"]),
+                    )
+                    if self._is_inside_any_bbox(bbox, table_bboxes):
                         continue
-                    for line in block.get("lines", []):
-                        for span in line.get("spans", []):
-                            text = span.get("text", "").strip()
-                            if not text:
-                                continue
 
-                            bbox = span.get("bbox")
-                            if self._is_inside_any_bbox(bbox, table_bboxes):
-                                continue
+                    if not current_line:
+                        current_line.append(word)
+                    else:
+                        prev = current_line[-1]
+                        # Check if on same line (vertical overlap) and close horizontal gap
+                        same_line = abs(float(word["top"]) - float(prev["top"])) < 4.0
+                        gap = float(word["x0"]) - float(prev["x1"])
+                        if same_line and gap < 12.0:
+                            current_line.append(word)
+                        else:
+                            span_text = " ".join(w["text"] for w in current_line).strip()
+                            if span_text:
+                                spans.append({
+                                    "is_table": False,
+                                    "text": span_text,
+                                    "size": round(float(current_line[0].get("size", 10.0)), 1),
+                                    "bbox": (
+                                        float(current_line[0]["x0"]),
+                                        float(min(w["top"] for w in current_line)),
+                                        float(current_line[-1]["x1"]),
+                                        float(max(w["bottom"] for w in current_line)),
+                                    ),
+                                })
+                            current_line = [word]
 
-                            spans.append({
-                                "is_table": False,
-                                "text": text,
-                                "size": round(span.get("size", 10.0), 1),
-                                "bbox": bbox,
-                            })
+                if current_line:
+                    span_text = " ".join(w["text"] for w in current_line).strip()
+                    if span_text:
+                        spans.append({
+                            "is_table": False,
+                            "text": span_text,
+                            "size": round(float(current_line[0].get("size", 10.0)), 1),
+                            "bbox": (
+                                float(current_line[0]["x0"]),
+                                float(min(w["top"] for w in current_line)),
+                                float(current_line[-1]["x1"]),
+                                float(max(w["bottom"] for w in current_line)),
+                            ),
+                        })
 
                 # C. Wrap extracted tables
                 for table in page_tables:
@@ -97,7 +130,10 @@ class NativePDFExtractor(BaseExtractor):
 
                 # D. SCANNED PAGE FALLBACK: If page has NO native text or tables, run OCR
                 if not spans:
-                    yield from self._ocr_scanned_page(page, page_num + 1)
+                    if page_num < len(pdfium_doc):
+                        yield from self._ocr_scanned_page(
+                            pdfium_doc[page_num], page_num + 1, page_width, float(plumber_page.height)
+                        )
                     continue
 
                 # Step 3: Sort in natural reading order
@@ -158,26 +194,26 @@ class NativePDFExtractor(BaseExtractor):
                             ),
                         )
         finally:
-            doc.close()
+            pdfium_doc.close()
             plumber_doc.close()
 
-    def _ocr_scanned_page(self, page: fitz.Page, page_num: int) -> Iterator[Element]:
+    def _ocr_scanned_page(
+        self, page: pdfium.PdfPage, page_num: int, page_w: float, page_h: float
+    ) -> Iterator[Element]:
         """Render a scanned PDF page to an image and run RapidOCR."""
         try:
-            pix= page.get_pixmap(dpi=200)
-            # Convert pixmap samples to numpy array for OpenCV/RapidOCR
-            img_np = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
-            if pix.n == 4:
-                # RGBA to RGB
-                img_np = img_np[:, :, :3]
+            scale = 200.0 / 72.0
+            bitmap = page.render(scale=scale)
+            pil_img = bitmap.to_pil().convert("RGB")
+            img_np = np.array(pil_img)
+            bitmap.close()
 
             ocr_results, _ = self._ocr(img_np)
             if not ocr_results:
                 return
 
-            # Scaling factor between rendered pixmap and original PDF points
-            scale_x = page.rect.width / pix.width
-            scale_y = page.rect.height / pix.height
+            scale_x = page_w / pil_img.width
+            scale_y = page_h / pil_img.height
 
             for item in ocr_results:
                 dt_boxes, text, score = item
@@ -214,21 +250,15 @@ class NativePDFExtractor(BaseExtractor):
                 return True
         return False
 
-    def _collect_font_sizes(self, doc: fitz.Document, max_pages: int) -> list[float]:
+    def _collect_font_sizes(self, doc: pdfplumber.PDF, max_pages: int) -> list[float]:
         """Collect all font sizes from the start of the document."""
         sizes = []
-        pages_to_scan = min(len(doc), max_pages)
+        pages_to_scan = min(len(doc.pages), max_pages)
         for i in range(pages_to_scan):
-            page = doc[i]
-            text_page = page.get_text("dict")
-            for block in text_page.get("blocks", []):
-                if block.get("type") != 0:
-                    continue
-                for line in block.get("lines", []):
-                    for span in line.get("spans", []):
-                        text = span.get("text", "").strip()
-                        if text:
-                            sizes.append(span.get("size", 10.0))
+            page = doc.pages[i]
+            words = page.extract_words(extra_attrs=["size"])
+            for w in words:
+                sizes.append(float(w.get("size", 10.0)))
         return sizes
 
     def _compute_header_thresholds(self, font_sizes: list[float]) -> dict[str, float]:
@@ -274,8 +304,10 @@ class NativePDFExtractor(BaseExtractor):
         right_sorted = sorted(right_col, key=key_func)
 
         if len(left_sorted) > 2 and len(right_sorted) > 2:
-            all_sorted = sorted(spans_spanning_middle + left_sorted + right_sorted, key=key_func)
+            all_sorted = sorted(
+                spans_spanning_middle + left_sorted + right_sorted, key=key_func
+            )
         else:
             all_sorted = sorted(elements, key=key_func)
 
-        return all_sorted
+        return all_sorted

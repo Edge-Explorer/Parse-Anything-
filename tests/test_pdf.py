@@ -81,24 +81,16 @@ def test_pdf_missing_file():
 
 def test_scanned_pdf_ocr_fallback(tmp_path: Path):
     """Test that a scanned PDF with no native text runs OCR fallback."""
-    import fitz
     from PIL import Image, ImageDraw
-    
+
     # 1. Create an image with text
-    img= Image.new("RGB", (400, 150), color= "white")
-    draw= ImageDraw.Draw(img)
-    draw.text((20, 50), "Scanned Invoice Document", fill= "black")
-    
-    img_path= tmp_path / "scan.png"
-    img.save(str(img_path))
-    
-    # 2. Insert image into a PDF without selectable text
-    pdf_path= tmp_path / "scanned.pdf"
-    doc= fitz.open()
-    page= doc.new_page(width= 400, height= 150)
-    page.insert_image(page.rect, filename= str(img_path))
-    doc.save(str(pdf_path))
-    doc.close()
+    img = Image.new("RGB", (400, 150), color="white")
+    draw = ImageDraw.Draw(img)
+    draw.text((20, 50), "Scanned Invoice Document", fill="black")
+
+    # 2. Save directly as a raster-only PDF (no selectable text)
+    pdf_path = tmp_path / "scanned.pdf"
+    img.save(str(pdf_path), "PDF")
     
     # 3. Parse with universal-parser
     parsed_doc= parse(pdf_path)
