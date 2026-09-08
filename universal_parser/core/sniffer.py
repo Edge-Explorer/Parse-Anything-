@@ -9,7 +9,6 @@ except (ImportError, Exception):
     magic = None
 
 
-
 class FileType(Enum):
     """All document types this parser understands."""
 
