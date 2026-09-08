@@ -3,7 +3,11 @@ from __future__ import annotations
 from enum import Enum, auto
 from pathlib import Path
 
-import magic
+try:
+    import magic
+except (ImportError, Exception):
+    magic = None
+
 
 
 class FileType(Enum):
@@ -98,23 +102,24 @@ def sniff(path: str | Path) -> FileType:
     path = Path(path)
     ext = path.suffix.lower()
 
-    try:
-        mime = magic.from_file(str(path), mime=True)
-        file_type = _MIME_MAP.get(mime)
+    if magic is not None:
+        try:
+            mime = magic.from_file(str(path), mime=True)
+            file_type = _MIME_MAP.get(mime)
 
-        # MIME was recognized but ambiguous — let extension break the tie
-        if file_type in (FileType.CSV, FileType.HTML, None):
-            ext_type = _EXT_MAP.get(ext)
-            if ext_type is not None:
-                return ext_type
+            # MIME was recognized but ambiguous — let extension break the tie
+            if file_type in (FileType.CSV, FileType.HTML, None):
+                ext_type = _EXT_MAP.get(ext)
+                if ext_type is not None:
+                    return ext_type
 
-        if file_type is not None:
-            return file_type
+            if file_type is not None:
+                return file_type
 
-    except Exception:  # noqa: BLE001, S110
-        # magic can fail on locked files, permission errors, etc.
-        # fall through to extension lookup
-        pass
+        except Exception:  # noqa: BLE001, S110
+            # magic can fail on locked files, permission errors, etc.
+            # fall through to extension lookup
+            pass
 
     # Last resort: extension only
     return _EXT_MAP.get(ext, FileType.UNKNOWN)

@@ -57,7 +57,6 @@ ENV/
 
 # uv
 .uv/
-uv.lock
 
 # Type checking
 .mypy_cache/
@@ -154,8 +153,4 @@ templates/
 # LARGE TEST FIXTURES — keep small samples, not real docs
 # -------------------------------------------------------
 # Uncomment if you have large fixture files you do not want pushed
-# tests/fixtures/**/*.pdf
-# tests/fixtures/**/*.docx
-
-# Test fixture files — never push real documents
-tests/fixtures/
+# tests/fixtures/**/*.large.pdf
