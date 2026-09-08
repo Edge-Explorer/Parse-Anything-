@@ -1,4 +1,4 @@
-name: Sync to Hugging Face Spaces
+﻿name: Sync to Hugging Face Spaces
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
           colorFrom: blue
           colorTo: indigo
           sdk: gradio
-          sdk_version: 6.26.0
+          sdk_version: 4.44.0
           app_file: main.py
           pinned: false
           license: mit
@@ -41,6 +41,8 @@ jobs:
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          git add README.md main.py pyproject.toml
+          # Remove binary files from git index for HF sync to satisfy HF file size policy
+          git rm -r --cached assets/ tests/fixtures/ || true
+          git add README.md main.py pyproject.toml requirements.txt universal_parser/ benchmarks/
           git commit -m "sync: update Hugging Face Space demo" || true
           git push -f https://Karan6124:$HF_TOKEN@huggingface.co/spaces/Karan6124/universal-doc-parser main
