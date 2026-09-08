@@ -46,7 +46,7 @@ def test_pdf_elements_are_valid():
             "list_item",
             "code_block",
         )
-        
+
         # Table elements use data/markdown_repr, other types must have text
         if element.type != "table":
             assert element.text is not None
@@ -79,6 +79,7 @@ def test_pdf_missing_file():
     with pytest.raises(FileNotFoundError):
         parse(Path("does_not_exist.pdf"))
 
+
 def test_scanned_pdf_ocr_fallback(tmp_path: Path):
     """Test that a scanned PDF with no native text runs OCR fallback."""
     from PIL import Image, ImageDraw
@@ -91,9 +92,9 @@ def test_scanned_pdf_ocr_fallback(tmp_path: Path):
     # 2. Save directly as a raster-only PDF (no selectable text)
     pdf_path = tmp_path / "scanned.pdf"
     img.save(str(pdf_path), "PDF")
-    
+
     # 3. Parse with universal-parser
-    parsed_doc= parse(pdf_path)
+    parsed_doc = parse(pdf_path)
     assert len(parsed_doc.content_tree) >= 1
-    extracted_text= " ".join([e.text for e in parsed_doc.content_tree if e.text]).lower()
+    extracted_text = " ".join([e.text for e in parsed_doc.content_tree if e.text]).lower()
     assert "scanned" in extracted_text or "invoice" in extracted_text

@@ -13,13 +13,13 @@ def to_markdown(doc: Document) -> str:
         - Tables render with structured Markdown grids
         - Code blocks render within ``` fences
     """
-    blocks: list[str]= []
-    
+    blocks: list[str] = []
+
     for el in doc.content_tree:
         if el.markdown_repr:
             blocks.append(el.markdown_repr)
         elif el.type == "heading":
-            level= el.level or 1
+            level = el.level or 1
             blocks.append(f"{'#' * level} {el.text or ''}")
         elif el.type == "list_item":
             blocks.append(f"- {el.text or ''}")
@@ -27,5 +27,5 @@ def to_markdown(doc: Document) -> str:
             blocks.append(f"```\n{el.text or ''}\n```")
         elif el.text:
             blocks.append(el.text)
-    
+
     return "\n\n".join(blocks)

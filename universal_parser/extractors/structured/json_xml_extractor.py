@@ -42,10 +42,7 @@ class JSONXMLExtractor(BaseExtractor):
             # Check if it's a list of uniform dictionaries (tabular JSON)
             if isinstance(data, list) and data and all(isinstance(row, dict) for row in data):
                 headers = list(data[0].keys())
-                rows = [
-                    [str(row.get(h, "")).strip() for h in headers]
-                    for row in data
-                ]
+                rows = [[str(row.get(h, "")).strip() for h in headers] for row in data]
 
                 md_header = "| " + " | ".join(headers) + " |"
                 md_separator = "| " + " | ".join(["---"] * len(headers)) + " |"

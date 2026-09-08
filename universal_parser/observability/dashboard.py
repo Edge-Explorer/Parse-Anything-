@@ -179,7 +179,7 @@ def generate_dashboard_html(collector: MetricsCollector | None = None) -> str:
             </div>
             <div class="card">
                 <div class="card-title">Drift / Anomalies</div>
-                <div class="card-value" style="color: {'var(--warning)' if summary['anomaly_count'] > 0 else 'var(--success)'};">{summary["anomaly_count"]}</div>
+                <div class="card-value" style="color: {"var(--warning)" if summary["anomaly_count"] > 0 else "var(--success)"};">{summary["anomaly_count"]}</div>
             </div>
         </div>
 

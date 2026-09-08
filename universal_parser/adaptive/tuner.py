@@ -87,12 +87,8 @@ class AdaptiveTuner:
         cfg.column_gap_threshold = round(
             self._clamp("column_gap_threshold", cfg.column_gap_threshold), 2
         )
-        cfg.heading_p95_ratio = round(
-            self._clamp("heading_p95_ratio", cfg.heading_p95_ratio), 3
-        )
-        cfg.heading_p85_ratio = round(
-            self._clamp("heading_p85_ratio", cfg.heading_p85_ratio), 3
-        )
+        cfg.heading_p95_ratio = round(self._clamp("heading_p95_ratio", cfg.heading_p95_ratio), 3)
+        cfg.heading_p85_ratio = round(self._clamp("heading_p85_ratio", cfg.heading_p85_ratio), 3)
         cfg.min_table_confidence = round(
             self._clamp("min_table_confidence", cfg.min_table_confidence), 3
         )

@@ -1,8 +1,3 @@
-﻿# Release workflow is not active yet — will be configured before v0.1.0 tag.
-# Requires PYPI_API_TOKEN secret to be set in GitHub repo settings.
-#
-# Placeholder to prevent GitHub Actions from erroring on an empty file.
-
 name: Release
 
 on:
@@ -11,8 +6,30 @@ on:
       - "v*"
 
 jobs:
-  placeholder:
+  publish:
+    name: Build and Publish to PyPI
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+
     steps:
-      - name: Release workflow not configured yet
-        run: echo "Release workflow will be configured before the v0.1.0 tag. Nothing to run yet."
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Build package distribution
+        run: uv build
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          skip-existing: true

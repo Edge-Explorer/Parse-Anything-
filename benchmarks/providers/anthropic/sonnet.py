@@ -11,4 +11,4 @@ class ClaudeSonnetProvider(BaseLLMProvider):
     cost_per_1k_output_tokens = 0.015
     base_mock_latency_ms = 1920.0
     base_mock_table_score = 0.95
-    base_mock_rag_score = 0.96
+    base_mock_rag_score = 0.96

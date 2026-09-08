@@ -91,7 +91,7 @@ class HTMLExtractor(BaseExtractor):
                             rows.append(tds)
 
                     if not headers and rows:
-                        headers = [f"Column_{i+1}" for i in range(len(rows[0]))]
+                        headers = [f"Column_{i + 1}" for i in range(len(rows[0]))]
 
                     if headers or rows:
                         md_header = "| " + " | ".join(headers) + " |"

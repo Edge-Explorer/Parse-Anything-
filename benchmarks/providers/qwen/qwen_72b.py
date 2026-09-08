@@ -11,4 +11,4 @@ class Qwen72BProvider(BaseLLMProvider):
     cost_per_1k_output_tokens = 0.00120
     base_mock_latency_ms = 1150.0
     base_mock_table_score = 0.90
-    base_mock_rag_score = 0.93
+    base_mock_rag_score = 0.93

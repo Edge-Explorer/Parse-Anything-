@@ -64,7 +64,11 @@ class GeminiFlashProvider(BaseLLMProvider):
                         table_score=0.94,
                         rag_faithfulness_score=0.96,
                         extracted_elements_count=16,
-                        raw_response={"status": "direct_gemini_success", "model": model_id, "usage": usage},
+                        raw_response={
+                            "status": "direct_gemini_success",
+                            "model": model_id,
+                            "usage": usage,
+                        },
                     )
             except Exception:  # noqa: BLE001, S112
                 continue

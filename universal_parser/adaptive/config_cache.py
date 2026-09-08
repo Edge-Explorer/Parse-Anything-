@@ -66,7 +66,11 @@ class TemplateConfigCache:
                     best_match_key = key
                     best_config = cached_cfg
 
-            if best_match_key is not None and best_score >= similarity_threshold and best_config is not None:
+            if (
+                best_match_key is not None
+                and best_score >= similarity_threshold
+                and best_config is not None
+            ):
                 self._cache.move_to_end(best_match_key)
                 return best_match_key, best_config.model_copy(deep=True)
 

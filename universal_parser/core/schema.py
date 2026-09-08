@@ -37,9 +37,7 @@ class Element(BaseModel):
     data: TableData | None = None  # only for type="table"
     markdown_repr: str | None = None  # pre-rendered markdown string of this element
     confidence: float | None = None  # 0.0 to 1.0, used for tables and OCR output
-    vlm_description: str | None = (
-        None  # Phase 8 — optional VLM-generated caption for figures
-    )
+    vlm_description: str | None = None  # Phase 8 — optional VLM-generated caption for figures
 
 
 class DocumentMetadata(BaseModel):
