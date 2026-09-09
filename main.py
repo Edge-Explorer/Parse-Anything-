@@ -1,5 +1,10 @@
 import json
+import sys
 import time
+from pathlib import Path
+
+# Ensure workspace root is always in Python search path
+sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
 import gradio as gr
 
@@ -160,4 +165,4 @@ with gr.Blocks(
     )
 
 if __name__ == "__main__":
-    demo.launch(ssr_mode=False, show_api=False)
+    demo.launch(ssr_mode=False)
