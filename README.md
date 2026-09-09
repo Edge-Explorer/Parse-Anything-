@@ -6,11 +6,14 @@
 
 [![CI](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml/badge.svg)](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/badge/PyPI-v1.0.1-blue.svg)](https://pypi.org/project/universal-doc-parser/)
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Live%20Demo-yellow.svg)](https://huggingface.co/spaces/Karan6124/universal-doc-parser)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue.svg)](https://pypi.org/project/universal-doc-parser/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Memory: <250MB](https://img.shields.io/badge/Memory_Limit-%3C250MB_RSS-success.svg)](#memory-and-performance)
 
 A CPU-only document ingestion engine for RAG pipelines and AI agents. Parses 15+ file formats into a unified Pydantic schema with hierarchical chunking, adaptive layout fingerprinting, and a FastMCP server interface.
+
+**[Try the Live Interactive Demo on Hugging Face Spaces](https://huggingface.co/spaces/Karan6124/universal-doc-parser)**
 
 No GPU. No paid API. No recurring cost.
 
