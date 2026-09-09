@@ -1,6 +1,22 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project are documented in this file. Entries are organized by release version and follow Semantic Versioning (https://semver.org/spec/v2.0.0.html). No dates are recorded per entry — version identifiers are the canonical references.
+
+---
+
+## [1.0.1]
+
+### Release Context
+
+Maintenance release updating package documentation, PyPI metadata, and honest technical report positioning.
+
+### Changed
+
+- Updated README to technical report format with detailed competitive comparison against Docling, Marker, and Unstructured.
+- Repositioned adaptive layout fingerprinting and template auto-tuning as the primary differentiator.
+- Fixed PyPI install instructions to reflect canonical package name `universal-doc-parser`.
+- Updated package description and license disclosures for complete GPL-3.0 transparency regarding optional Outlook MSG parsing (`extract-msg`).
+- Optimized banner image HTML formatting for PyPI image proxy rendering compatibility.
 
 ---
 
