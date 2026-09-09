@@ -29,6 +29,13 @@ dependencies = [
     "mcp>=1.0.0,<2.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Edge-Explorer/Parse-Anything-"
+"Live Demo" = "https://huggingface.co/spaces/Karan6124/universal-doc-parser"
+Repository = "https://github.com/Edge-Explorer/Parse-Anything-"
+Documentation = "https://github.com/Edge-Explorer/Parse-Anything-#readme"
+Issues = "https://github.com/Edge-Explorer/Parse-Anything-/issues"
+
 [project.optional-dependencies]
 demo = [
     "gradio>=4.0.0",
