@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="https://raw.githubusercontent.com/Edge-Explorer/Parse-Anything-/main/assets/banner.png" width="100%" style="max-width: 850px; border-radius: 8px;" alt="Parse-Anything Anime Manga Banner" />
 </p>
 
@@ -10,58 +10,86 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Memory: <250MB](https://img.shields.io/badge/Memory_Limit-%3C250MB_RSS-success.svg)](#memory-and-performance)
 
-A production-grade, zero-GPU, CPU-only document ingestion engine for RAG pipelines and AI agents. Parses 15+ file formats into a unified, versioned Pydantic schema with multi-column reading order, table extraction, OCR fallback, hierarchical chunking, knowledge graph export, adaptive layout fingerprinting, observability telemetry, and a FastMCP server interface.
+A CPU-only document ingestion engine for RAG pipelines and AI agents. Parses 15+ file formats into a unified Pydantic schema with hierarchical chunking, adaptive layout fingerprinting, and a FastMCP server interface.
 
-No GPU required. No paid API. Strictly under 250 MB RSS.
+No GPU. No paid API. No recurring cost.
 
 ---
 
 ## Table of Contents
 
-- [The Problem](#the-problem)
-- [What It Does](#what-it-does)
+- [Problem and Scope](#problem-and-scope)
+- [Related Work](#related-work)
+- [The One Original Contribution](#the-one-original-contribution)
 - [Supported Formats](#supported-formats)
 - [Installation](#installation)
 - [Quickstart](#quickstart)
 - [Output Schema](#output-schema)
 - [API Reference](#api-reference)
 - [Architecture](#architecture)
+- [Adaptive Layout Fingerprinting](#adaptive-layout-fingerprinting)
 - [FastMCP Server](#fastmcp-server)
 - [Memory and Performance](#memory-and-performance)
-- [Multi-Model Benchmark](#multi-model-benchmark)
+- [Benchmarks](#benchmarks)
+- [Limitations](#limitations)
 - [Contributing](#contributing)
 - [License](#license)
 
 ---
 
-## The Problem
+## Problem and Scope
 
-Feeding real-world documents into an AI pipeline is significantly harder than it looks.
+Feeding real-world documents into a RAG pipeline is harder than it looks.
 
-A PDF is not a text file. It is a stream of positioned drawing commands and font glyphs. Reading order breaks entirely on multi-column layouts. Tables without visible borders are invisible to naive text extraction. Scanned pages contain no machine-readable text. Every file format requires a different parsing library, and those libraries return different data structures — making it impossible to build a consistent, type-safe downstream pipeline.
+A PDF is a stream of positioned drawing commands. Reading order breaks on multi-column layouts. Tables without visible borders are invisible to naive text extraction. Scanned pages have no machine-readable text. Every file format requires a different library, and those libraries return different data structures — making a consistent, type-safe downstream pipeline difficult to build.
 
-The dominant approaches all have critical failure modes:
+This library handles the extraction and normalization layer: MIME sniffing, format routing, multi-column reading order reconstruction, two-pass table detection, OCR fallback, and output to a single validated Pydantic schema — for 15+ file formats, from a single `parse(path)` call, running entirely on CPU.
 
-- **Cloud vision APIs (GPT-4V, Gemini Vision):** Treat the document as an image, run autoregressive token prediction word-by-word, and bill per token. Table accuracy drops on complex layouts. Network latency adds 1.5–4.0 seconds per file. At enterprise scale, API ingestion costs reach thousands of dollars per month.
-- **PyMuPDF / fitz-based parsers:** AGPL-3.0 licensed. Commercially incompatible for closed-source products without a paid license.
-- **Single-format tools (pdfminer, mammoth, etc.):** Each handles one format. Building a multi-format pipeline requires a new library, a new schema, and new tests for every format.
-
-This library solves all of it from a single function call, running entirely on CPU, at zero recurring cost.
+It does **not** do layout model inference, deep learning-based element classification, or PDF reconstruction at the visual rendering layer. For those capabilities, see Docling.
 
 ---
 
-## What It Does
+## Related Work
 
-- Parses any supported document format into a **validated, versioned Pydantic schema** with a single `parse(path)` call
-- Preserves **natural reading order** across single-column, multi-column, and mixed layouts using geometric coordinate clustering
-- Extracts tables using dual-strategy **lattice and stream detection**, with cell-density heuristics to suppress false positives on paragraph-heavy pages
-- Falls back to **CPU-based OCR** (RapidOCR on ONNXRuntime) for scanned PDFs and raster images, with auto-orientation and deskew preprocessing
-- Recursively unpacks **embedded assets** in Office files and email attachments, routing each back through the parser
-- **Streams large files page-by-page** through generator pipelines without loading the full document into memory
-- Exports directly to **Markdown**, **RAG-ready hierarchical chunks with breadcrumb context**, and **knowledge graph triples**
-- Fingerprints document layouts using a **content-agnostic 2D spatial histogram** and caches optimal extraction parameters per template
-- Exposes a **FastMCP server interface** for Claude Desktop, Cursor, and AI agent frameworks
-- Collects ingestion **observability telemetry** and exports a standalone interactive HTML dashboard
+Honest comparison with the tools a practitioner would actually evaluate before using this one.
+
+**[Docling](https://github.com/DS4SD/docling)** (IBM Research / Linux Foundation, MIT-adjacent license)
+Docling ships a trained document layout analysis model and a PDF table structure recognition model. Its classification quality on complex PDFs — dense academic papers, financial reports with borderless tables — is substantially higher than any heuristic-based approach including this one. If layout accuracy on complex PDFs is your primary concern, evaluate Docling first. It is CPU-capable and actively maintained by a funded team.
+
+**[Marker](https://github.com/VikParuchuri/marker)** (Apache-2.0)
+Marker uses a fine-tuned Surya OCR model and a layout segmentation model. It produces high-quality Markdown from PDFs, including scanned documents. Its OCR and rendering quality on scientific and academic PDFs is superior to the RapidOCR fallback used here. If your pipeline is primarily scientific PDFs, evaluate Marker first.
+
+**[Unstructured](https://github.com/Unstructured-IO/unstructured)** (Apache-2.0, managed API available)
+Unstructured supports the broadest format coverage in the space (40+ formats) with optional hi-res partition mode and a managed API. If format breadth or managed infrastructure is a priority, evaluate Unstructured first.
+
+**Where this library differs:**
+
+| Criterion | Docling | Marker | Unstructured | Universal Parser |
+|---|---|---|---|---|
+| Layout model inference | Yes (trained model) | Yes (Surya) | Optional (hi-res mode) | No (heuristics only) |
+| Table structure recognition | Trained model | Limited | Optional | Heuristic (lattice + stream) |
+| OCR quality | Good | Excellent | Good | Adequate (RapidOCR) |
+| Format coverage | PDF, DOCX, XLSX, PPTX, HTML | PDF, images | 40+ formats | 15+ formats |
+| Python version | 3.9+ | 3.9+ | 3.9+ | 3.11+ |
+| Memory footprint | Moderate (model weights) | Higher (model weights) | Varies | <250 MB RSS (no model weights) |
+| Per-template auto-tuning | No | No | No | Yes (see below) |
+| MCP server interface | No | No | No | Yes |
+
+The heuristic approach used here extracts less accurately on complex layouts than Docling or Marker. The trade-off is zero model weights, lower memory, and a per-template configuration learning mechanism described in the next section.
+
+---
+
+## The One Original Contribution
+
+The piece of this library that does not exist in the same form in Docling, Marker, or Unstructured is the **adaptive layout fingerprinting and per-template auto-tuner**.
+
+Many real RAG pipelines process the same document template repeatedly — the same invoice format thousands of times, the same SEC 10-K filing structure across years, the same internal report template across departments. In these workloads, the failure mode of heuristic extractors is predictable and reproducible: the same column threshold is wrong on the same template, every time.
+
+The fingerprinter computes a content-agnostic 10x10 spatial occupancy grid from element bounding boxes, hashes it with SHA-256, and uses it as a stable template identity. The auto-tuner runs coordinate descent over the parameter space against a reference ground-truth document for that template, then persists the optimal configuration to a JSON cache. On subsequent files matching the same fingerprint (exact or fuzzy Cosine-Jaccard similarity above a configurable threshold), the cached configuration is applied automatically.
+
+This is a focused, narrow contribution: it does not make the base extraction better than Docling on arbitrary documents. It reduces error variance on recurring templates where a heuristic extractor's default parameters are consistently wrong.
+
+The ablation study validating this claim on a real document set is [planned and tracked here](#benchmarks).
 
 ---
 
@@ -81,7 +109,8 @@ This library solves all of it from a single function call, running entirely on C
 | Structured | CSV / TSV | `.csv`, `.tsv` | Python `csv.Sniffer` dialect auto-detection |
 | Structured | Parquet | `.parquet` | `pyarrow` zero-copy columnar record batch streaming |
 | Structured | JSON / XML | `.json`, `.xml` | Recursive tree flattening and normalized schema mapping |
-| Email | EML / MBOX / MSG | `.eml`, `.mbox`, `.msg` | `email` stdlib and `extract-msg` with recursive embedded attachment routing |
+| Email | EML / MBOX | `.eml`, `.mbox` | `email` stdlib with recursive embedded attachment routing |
+| Email | MSG (Outlook) | `.msg` | `extract-msg` (GPL-3.0 — see license section) with recursive attachment routing |
 
 ---
 
@@ -90,39 +119,42 @@ This library solves all of it from a single function call, running entirely on C
 Requires Python 3.11 or later.
 
 ```bash
-pip install universal-parser
+pip install universal-doc-parser
 ```
 
 With OCR support for scanned PDFs and raster images:
 
 ```bash
-pip install "universal-parser[ocr]"
+pip install "universal-doc-parser[ocr]"
 ```
 
 With development tooling:
 
 ```bash
-pip install "universal-parser[dev]"
+pip install "universal-doc-parser[dev]"
 ```
 
 Using uv:
 
 ```bash
-uv add universal-parser
-uv add "universal-parser[ocr]"
+uv add universal-doc-parser
+uv add "universal-doc-parser[ocr]"
 ```
 
-System dependencies on Linux only (for magic-byte MIME detection):
+System dependencies on Linux (for magic-byte MIME detection — optional, falls back to extension sniffing if absent):
 
 ```bash
-# Ubuntu / Debian
-sudo apt-get install -y libmagic1 libgl1
+# Ubuntu / Debian Bookworm (Python 3.10 era containers)
+sudo apt-get install -y libmagic1t64
+
+# Ubuntu / Debian Bullseye and earlier
+sudo apt-get install -y libmagic1
 
 # Fedora / RHEL
-sudo dnf install -y file-libs mesa-libGL
+sudo dnf install -y file-libs
 ```
 
-On macOS and Windows these are handled through the Python package layer automatically.
+On macOS and Windows, MIME detection is handled through the Python package layer automatically.
 
 ---
 
@@ -175,7 +207,7 @@ for chunk in chunks:
     print("---")
 ```
 
-Each chunk carries its full heading ancestry (H1 > H2 > H3) prepended as context. Retrieval models and downstream LLMs always receive structurally anchored chunks rather than arbitrary token windows.
+Each chunk carries its full heading ancestry (H1 > H2 > H3) prepended as context. Retrieval models receive structurally anchored chunks rather than arbitrary token windows.
 
 ### Export a knowledge graph
 
@@ -263,7 +295,7 @@ Every supported format produces the same output structure.
 | `metadata.has_scanned_pages` | `bool` | `true` if any page required OCR processing. |
 | `element_id` | `string` | UUID v4 per element. |
 | `type` | `enum` | One of: `heading`, `paragraph`, `table`, `figure`, `list_item`, `code_block`. |
-| `level` | `int or null` | Heading depth 1–6. `null` for non-heading elements. |
+| `level` | `int or null` | Heading depth 1-6. `null` for non-heading elements. |
 | `text` | `string or null` | Plain text content. `null` for pure table elements. |
 | `page` | `int or null` | 1-indexed page number. `null` for formats without page structure. |
 | `bbox` | `BBox or null` | `{x0, y0, x1, y1}` in PDF points (72 pt = 1 inch). `null` for non-spatial formats. |
@@ -286,7 +318,7 @@ doc: Document = parse(path)
 
 The main entry point. Accepts `str` or `pathlib.Path`. Performs format sniffing, routing, extraction, and Pydantic validation. Returns a fully validated `Document`.
 
-Raises `FileNotFoundError` if the path does not exist. Raises `ValueError` for corrupt, unreadable, or unrecognized files. All internal extractor errors are caught and surfaced as `ValueError` with context. Raw exceptions from underlying libraries never propagate.
+Raises `FileNotFoundError` if the path does not exist. Raises `ValueError` for corrupt, unreadable, or unrecognized files. All internal extractor errors are caught and surfaced as `ValueError` with context.
 
 ---
 
@@ -313,8 +345,8 @@ chunks: list[Chunk] = to_chunks(doc, max_tokens=512, overlap_tokens=50)
 Hierarchical token-aware chunker.
 
 Parameters:
-- `max_tokens` — Maximum estimated tokens per chunk. Default: `512`. Estimated at approximately 4 characters per token.
-- `overlap_tokens` — Reserved for future sliding window chunking.
+- `max_tokens` - Maximum estimated tokens per chunk. Default: `512`. Estimated at approximately 4 characters per token.
+- `overlap_tokens` - Reserved for future sliding window chunking.
 
 Chunk fields:
 
@@ -392,7 +424,7 @@ Adding a new format requires creating one file in `universal_parser/extractors/`
 
 PDF extraction runs in two cooperative passes over each page.
 
-**Pass 1 — Table Detection** (`extractors/pdf/tables.py`)
+**Pass 1 - Table Detection** (`extractors/pdf/tables.py`)
 
 Two strategies are attempted in sequence:
 
@@ -401,7 +433,7 @@ Two strategies are attempted in sequence:
 
 Confidence scores are assigned based on cell uniformity and structural regularity.
 
-**Pass 2 — Text and Heading Extraction** (`extractors/pdf/native.py`)
+**Pass 2 - Text and Heading Extraction** (`extractors/pdf/native.py`)
 
 - Character positions are read from the PDFium character map for every non-table region.
 - Font sizes across the page are collected and percentile thresholds computed. Elements at or above the 95th percentile are classified H1, the 85th percentile H2, and the 75th percentile H3. All remaining text is classified as paragraphs.
@@ -410,9 +442,9 @@ Confidence scores are assigned based on cell uniformity and structural regularit
 
 ---
 
-### Adaptive Layout Fingerprinting
+## Adaptive Layout Fingerprinting
 
-Documents that follow recurring templates — invoices, financial reports, regulatory filings — can be registered once and reused across thousands of files with cached optimal extraction parameters.
+Documents that follow recurring templates - invoices, financial reports, regulatory filings - can be registered once and reused across thousands of files with cached optimal extraction parameters.
 
 **Fingerprinting** (`adaptive/fingerprint.py`)
 
@@ -452,6 +484,8 @@ optimal_config = auto_tune(
 )
 cache.set(fp.hash_digest, optimal_config)
 ```
+
+The ablation study measuring extraction accuracy with auto-tuning on vs off across a real set of recurring templates is in progress and will be published here when complete with methodology and sample sizes disclosed.
 
 ---
 
@@ -502,12 +536,12 @@ Configure in Claude Desktop (`claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
-    "universal-parser": {
+    "universal-doc-parser": {
       "command": "uv",
       "args": [
         "run",
         "--with",
-        "universal-parser",
+        "universal-doc-parser",
         "python",
         "-m",
         "universal_parser.mcp.server"
@@ -525,15 +559,15 @@ After restarting Claude Desktop, Claude can invoke `parse_document` against any 
 
 The streaming generator architecture bounds memory consumption regardless of document length. No page is held in memory after it is yielded.
 
-Verified benchmarks on standard laptop hardware (Intel Core i7, 16 GB RAM, no GPU):
+The numbers below are from the memory benchmark suite (`benchmarks/memory_profile.py`) running on an Intel Core i7, 16 GB RAM, no GPU. These are heuristic estimates from a controlled synthetic document, not profiled runs on varied real-world corpora. Real-world peak RSS will vary depending on document complexity, table density, and OCR engagement.
 
 | Document Size | Peak RSS Memory | Processing Time |
 |---|---|---|
-| 100 pages | 148 MB | 4.8 seconds |
-| 500 pages | 165 MB | 23.4 seconds |
-| 1,000 pages | 178 MB | 48.2 seconds |
+| 100 pages | ~150 MB | ~5 seconds |
+| 500 pages | ~165 MB | ~24 seconds |
+| 1,000 pages | ~180 MB | ~49 seconds |
 
-The 250 MB RSS hard limit is asserted in the memory benchmark suite on every CI push:
+The 250 MB RSS hard limit is asserted in the benchmark suite on every CI push:
 
 ```bash
 uv run python benchmarks/memory_profile.py
@@ -541,49 +575,47 @@ uv run python benchmarks/memory_profile.py
 
 ---
 
-## Multi-Model Benchmark
+## Benchmarks
 
-Universal Parser was benchmarked against 15 frontier and open-weight models on multi-page financial and technical documents with complex tables, multi-column layouts, and mixed heading hierarchies.
+### What exists today
 
-Evaluation metrics:
-- **Latency** — wall-clock time from file path to structured output
-- **Cost per document** — estimated API cost for a 10-page document at published token rates
-- **Table accuracy** — structural reconstruction accuracy against manually verified ground-truth data
-- **RAG faithfulness** — downstream answer faithfulness using a reference question-answering evaluation set
+The benchmark suite at `benchmarks/run_llm_benchmark.py` compares this library's extraction output against live API calls to Gemini 2.5 Flash, GPT-4o, DeepSeek V3, Qwen 2.5 72B, Llama 3.3 70B, and other models accessible via the Google AI Studio and OpenRouter free tiers.
 
-| Engine / Model | Provider | Latency | Cost / 10-Page Doc | Table Accuracy | RAG Faithfulness |
-|---|---|---|---|---|---|
-| **Universal Parser (CPU)** | **Local** | **~450 ms** | **$0.00000** | **98.5%** | **99.0%** |
-| Gemini 2.5 Flash | Google | 1,450 ms | $0.00075 | 96.0% | 97.5% |
-| Gemini 2.5 Pro | Google | 2,850 ms | $0.00350 | 97.5% | 98.5% |
-| GPT-4o | OpenAI | 2,100 ms | $0.01250 | 96.5% | 98.0% |
-| GPT-4o Mini | OpenAI | 1,250 ms | $0.00075 | 93.0% | 95.0% |
-| Claude 3.5 Sonnet | Anthropic | 2,400 ms | $0.01500 | 97.0% | 98.5% |
-| Claude 3 Opus | Anthropic | 3,900 ms | $0.07500 | 98.0% | 99.0% |
-| DeepSeek V3 | DeepSeek | 1,600 ms | $0.00085 | 95.5% | 97.0% |
-| DeepSeek R1 | DeepSeek | 3,200 ms | $0.00280 | 97.0% | 98.0% |
-| Qwen 2.5 72B | Alibaba | 1,750 ms | $0.00180 | 95.0% | 96.5% |
-| Qwen 2.5 Coder | Alibaba | 1,650 ms | $0.00150 | 94.5% | 96.0% |
-| Llama 3.3 70B | Meta | 1,350 ms | $0.00190 | 94.0% | 97.0% |
-| Mistral Large 2411 | Mistral AI | 1,680 ms | $0.01000 | 94.0% | 97.0% |
-| Kimi k1.5 | Moonshot AI | 1,420 ms | $0.00600 | 93.0% | 95.0% |
-| GLM-4 9B | Zhipu AI | 1,150 ms | $0.00050 | 91.0% | 94.0% |
-| Command R+ | Cohere | 1,550 ms | $0.01250 | 93.0% | 96.0% |
+14 of the 15 rows in the original benchmark table were live API results. The two Claude rows (Claude 3.5 Sonnet and Claude 3 Opus) were simulated estimates — Anthropic does not expose Claude on any free API tier, and the original README did not disclose this distinction. Those rows have been removed from published tables until a properly labeled live run can be completed.
 
-Cloud LLMs predict every character autoregressively from a visual or token representation of the document. Universal Parser reads the underlying binary vector streams and coordinate data directly. Table borders, cell boundaries, and reading order are computed geometrically from exact floating-point positions — there is no prediction step and therefore no hallucination risk at the extraction layer.
-
-The RAG faithfulness score follows from the hierarchical chunker. Every chunk carries its full heading ancestry prepended as context. Retrieval models and downstream LLMs receive structurally anchored chunks rather than arbitrary token windows, eliminating the most common source of retrieval hallucination.
-
-Run the benchmark suite:
+Run the benchmark suite yourself:
 
 ```bash
-# Offline simulation — zero cost, no API keys required
+# Offline mode — simulates responses, zero cost, no API keys required
 uv run python benchmarks/run_llm_benchmark.py
 
-# Live mode
+# Live mode — runs real API calls against Gemini and OpenRouter models
 GEMINI_API_KEY=your_key OPENROUTER_API_KEY=your_key \
   uv run python benchmarks/run_llm_benchmark.py --live
 ```
+
+### What is planned
+
+The benchmark work that would make this project defensible — and which does not yet exist — is:
+
+1. **Head-to-head against Docling, Marker, and Unstructured** on the same document corpus (target: SEC EDGAR 10-K filings and PubTables-1M) with disclosed sample sizes and a documented scoring methodology.
+
+2. **Auto-tuning ablation study:** Extraction accuracy with fingerprint-based auto-tuning ON vs OFF, across a set of 20-30 recurring invoice and filing templates, with sample sizes and error metric definition stated explicitly.
+
+These are the two experiments that would either validate or invalidate the claims this project is making. Until they exist, treat the current benchmark numbers as directional indicators, not validated results.
+
+---
+
+## Limitations
+
+These are known failure modes, not edge cases.
+
+- **Complex PDF layouts:** On multi-column academic papers and dense financial reports with borderless tables, Docling's trained layout model will outperform the heuristic approach used here. If layout accuracy on complex PDFs is the primary requirement, use Docling.
+- **Scanned document quality:** The RapidOCR fallback performs adequately on clean scans. On degraded, skewed, or low-resolution scans, Marker's Surya-based OCR pipeline will produce substantially better results.
+- **Python version requirement:** This library requires Python 3.11+, which excludes some deployment environments. Docling, Marker, and Unstructured support Python 3.9+.
+- **MSG parsing license:** The `extract-msg` dependency carries a GPL-3.0 license. MSG parsing is therefore subject to GPL-3.0 copyleft terms — see the license section for the full implication.
+- **Memory numbers are heuristic estimates:** The memory table above was produced from a controlled synthetic document. Real-world peak RSS will vary.
+- **Benchmark numbers are not externally validated:** No one outside of the author has run the full benchmark suite on the full dataset yet. Treat published numbers accordingly.
 
 ---
 
@@ -599,14 +631,14 @@ Adding a new format:
 4. Import the module in `universal_parser/__init__.py`
 5. Add fixture files in `tests/fixtures/<format>/` — at minimum three samples including one deliberately complex or malformed file
 6. Write tests in `tests/test_<format>.py` asserting schema correctness, content accuracy, and graceful error handling
-7. Add a `CHANGELOG.md` entry
+7. Add a `docs/CHANGELOG.md` entry
 
 Pull requests without fixture files and corresponding tests will not be reviewed.
 
 Code standards:
 - Pass `uv run ruff check .` with zero errors
 - Format with `uv run ruff format .`
-- No AGPL-licensed dependencies. All additions must carry MIT, Apache-2.0, or BSD licenses
+- No new AGPL-licensed dependencies. All additions must carry MIT, Apache-2.0, or BSD licenses
 
 Full local quality gate:
 
@@ -626,7 +658,7 @@ uv run python benchmarks/run_llm_benchmark.py
 
 This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for the full text.
 
-All runtime dependencies carry permissive, commercially compatible licenses. There are no AGPL dependencies. This library is safe for use in closed-source commercial software.
+**License note on MSG support:** The `extract-msg` dependency used for Outlook `.msg` parsing is licensed under **GPL-3.0**. If you parse `.msg` files in a closed-source product, the GPL-3.0 copyleft terms apply to that use. All other runtime dependencies carry permissive licenses (MIT, Apache-2.0, BSD, LGPL-3.0). If your use case requires a fully permissive dependency tree, you can exclude `.msg` parsing by not calling `parse()` on `.msg` files and removing `extract-msg` from your installation.
 
 | Dependency | License | Purpose |
 |---|---|---|
@@ -644,7 +676,7 @@ All runtime dependencies carry permissive, commercially compatible licenses. The
 | `python-pptx` | MIT | PowerPoint parsing |
 | `xlrd` | BSD-3-Clause | Legacy XLS binary parsing |
 | `olefile` | BSD-2-Clause | OLE compound file parsing |
-| `extract-msg` | GPL-3.0 | Outlook MSG email parsing |
+| `extract-msg` | **GPL-3.0** | Outlook MSG email parsing -- see note above |
 | `beautifulsoup4` | MIT | HTML fallback parser |
 | `mcp` | MIT | FastMCP server interface |
 
