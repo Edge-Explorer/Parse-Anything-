@@ -1,8 +1,14 @@
 import json
+import os
 import sys
 import time
 from dataclasses import asdict
 from pathlib import Path
+
+# Cap BLAS/ONNX worker threads to prevent full CPU pegging / system stutter
+os.environ.setdefault("OMP_NUM_THREADS", "4")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "4")
+os.environ.setdefault("MKL_NUM_THREADS", "4")
 
 # Ensure workspace root is always in Python search path
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
@@ -24,7 +30,7 @@ except (ImportError, Exception):
     pass
 
 
-def process_document(file_obj, max_chunk_tokens):
+def process_document(file_obj, max_chunk_tokens, progress=gr.Progress(track_tqdm=True)):
     if file_obj is None:
         return (
             "### Please upload a document to begin parsing.",
@@ -38,35 +44,52 @@ def process_document(file_obj, max_chunk_tokens):
     start_time = time.perf_counter()
 
     try:
-        # Parse document using CPU-based universal-parser pipeline (zero GPU quota used)
+        progress(0.1, desc="Reading file & extracting document structure...")
         doc = parse(file_path)
         elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
         # 1. Render Markdown
+        progress(0.6, desc="Rendering Markdown & RAG chunks...")
         markdown_output = to_markdown(doc)
 
-        # 2. Render Hierarchical RAG Chunks
+        # 2. Render Hierarchical RAG Chunks (capped in UI preview to prevent browser lag)
         chunks = to_chunks(doc, max_tokens=int(max_chunk_tokens))
-        chunks_json = json.dumps(
-            [
-                {
-                    "chunk_id": c.chunk_id,
-                    "headings": c.headings,
-                    "estimated_tokens": c.estimated_tokens,
-                    "page_numbers": c.page_numbers,
-                    "text": c.text,
-                }
-                for c in chunks
-            ],
-            indent=2,
-        )
+        chunk_data = [
+            {
+                "chunk_id": c.chunk_id,
+                "headings": c.headings,
+                "estimated_tokens": c.estimated_tokens,
+                "page_numbers": c.page_numbers,
+                "text": c.text,
+            }
+            for c in chunks
+        ]
+        display_chunks = chunk_data[:100]
+        if len(chunk_data) > 100:
+            display_chunks.append(
+                {"_ui_note": f"Showing first 100 of {len(chunk_data)} total chunks for UI speed."}
+            )
+        chunks_json = json.dumps(display_chunks, indent=2)
 
         # 3. Render Knowledge Graph
+        progress(0.8, desc="Building Knowledge Graph & Schemas...")
         graph = to_graph(doc)
-        graph_json = json.dumps(asdict(graph), indent=2)
+        graph_dict = asdict(graph)
+        if len(graph_dict.get("nodes", [])) > 200:
+            total_nodes = len(graph_dict["nodes"])
+            graph_dict["nodes"] = graph_dict["nodes"][:200]
+            graph_dict["_ui_note"] = f"Displaying first 200 of {total_nodes} nodes in UI."
+        graph_json = json.dumps(graph_dict, indent=2)
 
-        # 4. Render Raw Schema JSON
-        schema_json = json.dumps(doc.model_dump(), indent=2, default=str)
+        # 4. Render Raw Schema JSON (capped in browser code viewer for smoothness)
+        doc_dump = doc.model_dump()
+        if len(doc_dump.get("content_tree", [])) > 200:
+            total_elements = len(doc_dump["content_tree"])
+            doc_dump["content_tree"] = doc_dump["content_tree"][:200]
+            doc_dump["_ui_note"] = (
+                f"Displaying first 200 of {total_elements} elements in UI. Document is 100% parsed."
+            )
+        schema_json = json.dumps(doc_dump, indent=2, default=str)
 
         # 5. Telemetry & Metrics Summary
         element_types = {}
@@ -84,6 +107,7 @@ def process_document(file_obj, max_chunk_tokens):
 #### Element Distribution
 """ + "\n".join([f"- **{k.capitalize()}:** `{v}`" for k, v in element_types.items()])
 
+        progress(1.0, desc="Complete!")
         return (
             markdown_output,
             chunks_json,
