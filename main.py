@@ -11,18 +11,17 @@ import gradio as gr
 
 from universal_parser import parse, to_chunks, to_graph, to_markdown
 
-# Hugging Face ZeroGPU compatibility handler
+# Hugging Face ZeroGPU compatibility handler (startup check only)
 try:
     import spaces
 
-    @spaces.GPU(duration=60)
-    def _parse_with_spaces_guard(path: str):
-        return parse(path)
+    @spaces.GPU(duration=1)
+    def _zero_gpu_startup_guard():
+        """Satisfies ZeroGPU startup check without consuming user GPU quota."""
+        return None
 
 except (ImportError, Exception):
-
-    def _parse_with_spaces_guard(path: str):
-        return parse(path)
+    pass
 
 
 def process_document(file_obj, max_chunk_tokens):
@@ -39,8 +38,8 @@ def process_document(file_obj, max_chunk_tokens):
     start_time = time.perf_counter()
 
     try:
-        # Parse document using universal-parser pipeline
-        doc = _parse_with_spaces_guard(file_path)
+        # Parse document using CPU-based universal-parser pipeline (zero GPU quota used)
+        doc = parse(file_path)
         elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
         # 1. Render Markdown
