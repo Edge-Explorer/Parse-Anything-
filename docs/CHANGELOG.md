@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file. Entries are org
 
 ---
 
+## [1.0.2]
+
+### Release Context
+
+Documentation and metadata release adding live Hugging Face Spaces integration links, project URLs, and comprehensive architecture specifications across the documentation suite.
+
+### Added
+
+- Added live Hugging Face Space interactive demo badge and links to `README.md` and `pyproject.toml` (`[project.urls]`).
+- Created complete `docs/ARCHITECTURE.md` specification detailing the two-pass extraction engine, font-size percentile hierarchy, and adaptive fingerprinting.
+- Created complete `docs/SCHEMA.md` field-level reference covering all Pydantic models, type constraints, and null semantics.
+- Created complete `docs/ADDING_A_FORMAT.md` step-by-step contributor implementation guide for extending format coverage.
+- Added UI payload safeguards and thread ceilings in `main.py` to ensure smooth browser rendering on multi-page reports.
+
+---
+
 ## [1.0.1]
 
 ### Release Context
