@@ -1,6 +1,7 @@
 import json
 import sys
 import time
+from dataclasses import asdict
 from pathlib import Path
 
 # Ensure workspace root is always in Python search path
@@ -63,13 +64,7 @@ def process_document(file_obj, max_chunk_tokens):
 
         # 3. Render Knowledge Graph
         graph = to_graph(doc)
-        graph_json = json.dumps(
-            {
-                "nodes": graph.get("nodes", []),
-                "edges": graph.get("edges", []),
-            },
-            indent=2,
-        )
+        graph_json = json.dumps(asdict(graph), indent=2)
 
         # 4. Render Raw Schema JSON
         schema_json = json.dumps(doc.model_dump(), indent=2, default=str)
