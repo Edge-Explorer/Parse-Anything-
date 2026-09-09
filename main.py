@@ -129,7 +129,7 @@ with gr.Blocks(
     gr.Markdown(
         """
         # Universal Document Parser
-        ### Zero-GPU, CPU-Only Production Ingestion Engine for RAG Pipelines & AI Agents
+        ### Zero-GPU, CPU-Only Engineered Ingestion Engine for RAG Pipelines & AI Agents
 
         Upload any document below (PDF, DOCX, XLSX, PPTX, HTML, EPUB, CSV, Parquet, JSON, XML, EML, MSG, Image) to extract structured Markdown, hierarchical RAG chunks, knowledge graph entities, and schema telemetry in real-time.
         """
