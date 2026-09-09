@@ -1,11 +1,11 @@
-﻿<p align="center">
-  <img src="https://raw.githubusercontent.com/Edge-Explorer/Parse-Anything-/main/assets/banner.png" width="100%" style="max-width: 850px; border-radius: 8px;" alt="Parse-Anything Anime Manga Banner" />
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Edge-Explorer/Parse-Anything-/main/assets/banner.png" alt="Universal Document Parser Banner" width="800" />
 </p>
 
 # UNIVERSAL PARSER
 
 [![CI](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml/badge.svg)](https://github.com/Edge-Explorer/Parse-Anything-/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/badge/PyPI-v1.0.0-blue.svg)](https://pypi.org/project/universal-doc-parser/)
+[![PyPI](https://img.shields.io/badge/PyPI-v1.0.1-blue.svg)](https://pypi.org/project/universal-doc-parser/)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue.svg)](https://pypi.org/project/universal-doc-parser/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Memory: <250MB](https://img.shields.io/badge/Memory_Limit-%3C250MB_RSS-success.svg)](#memory-and-performance)

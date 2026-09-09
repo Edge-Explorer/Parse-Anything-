@@ -1,7 +1,7 @@
 [project]
 name = "universal-doc-parser"
-version = "1.0.0"
-description = "A zero-GPU, CPU-only, 100% commercially permissive document ingestion engine for RAG pipelines."
+version = "1.0.1"
+description = "A zero-GPU, CPU-only document ingestion engine for RAG pipelines and AI agents."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
