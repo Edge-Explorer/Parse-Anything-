@@ -44,6 +44,6 @@ jobs:
 
           # Initialize a fresh single-commit git repository to strip any historical binary blobs
           git init -b main
-          git add README.md main.py pyproject.toml requirements.txt universal_parser/ benchmarks/ LICENSE
+          git add README.md main.py pyproject.toml requirements.txt packages.txt universal_parser/ benchmarks/ LICENSE
           git commit -m "deploy: live Hugging Face Space application"
           git push -f https://Karan6124:$HF_TOKEN@huggingface.co/spaces/Karan6124/universal-doc-parser main
