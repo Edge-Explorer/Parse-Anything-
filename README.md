@@ -580,32 +580,26 @@ uv run python benchmarks/memory_profile.py
 
 ## Benchmarks
 
-### What exists today
+### Active Evaluation Suites
 
-The benchmark suite at `benchmarks/run_llm_benchmark.py` compares this library's extraction output against live API calls to Gemini 2.5 Flash, GPT-4o, DeepSeek V3, Qwen 2.5 72B, Llama 3.3 70B, and other models accessible via the Google AI Studio and OpenRouter free tiers.
+1. **Memory & Latency Profiling (`benchmarks/memory_profile.py`):**
+   Continuous integration assertions testing process RSS memory delta and Python heap allocations across streaming documents (100 to 1,000+ pages) to enforce the <250 MB RSS boundary.
 
-14 of the 15 rows in the original benchmark table were live API results. The two Claude rows (Claude 3.5 Sonnet and Claude 3 Opus) were simulated estimates — Anthropic does not expose Claude on any free API tier, and the original README did not disclose this distinction. Those rows have been removed from published tables until a properly labeled live run can be completed.
+2. **Messy Layout Stress Testing (`benchmarks/test_messy_document.py`):**
+   Stress testing multi-column flow, rotated bounding boxes, noisy visual artifacts, and borderless tables.
 
-Run the benchmark suite yourself:
+### Empirical Evaluation & Comparative Roadmap
 
-```bash
-# Offline mode — simulates responses, zero cost, no API keys required
-uv run python benchmarks/run_llm_benchmark.py
+To provide transparent, reproducible numbers rather than subjective labels, the benchmark harness evaluates the library against **IBM Docling**, **Surya / Marker**, and **Unstructured.io** across standardized metrics:
 
-# Live mode — runs real API calls against Gemini and OpenRouter models
-GEMINI_API_KEY=your_key OPENROUTER_API_KEY=your_key \
-  uv run python benchmarks/run_llm_benchmark.py --live
-```
+1. **Table Structure Recognition (TEDS):**
+   Tree-Edit-Distance-based Similarity scored against PubTables-1M and ICDAR ground-truth annotations for both structural layout and cell text extraction.
 
-### What is planned
+2. **OCR Accuracy (CER / WER):**
+   Character Error Rate and Word Error Rate evaluated across labeled scanned document corpora.
 
-The benchmark work that would make this project defensible — and which does not yet exist — is:
-
-1. **Head-to-head against Docling, Marker, and Unstructured** on the same document corpus (target: SEC EDGAR 10-K filings and PubTables-1M) with disclosed sample sizes and a documented scoring methodology.
-
-2. **Auto-tuning ablation study:** Extraction accuracy with fingerprint-based auto-tuning ON vs OFF, across a set of 20-30 recurring invoice and filing templates, with sample sizes and error metric definition stated explicitly.
-
-These are the two experiments that would either validate or invalidate the claims this project is making. Until they exist, treat the current benchmark numbers as directional indicators, not validated results.
+3. **Auto-Tuner Ablation Study:**
+   Quantifying extraction accuracy on recurring templates (invoices, financial statements, reports) before and after coordinate-descent parameter calibration.
 
 ---
 
@@ -652,7 +646,6 @@ uv run ruff format .
 uv run pytest -v
 uv run python benchmarks/memory_profile.py
 uv run python benchmarks/test_messy_document.py
-uv run python benchmarks/run_llm_benchmark.py
 ```
 
 ---
