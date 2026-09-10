@@ -1,6 +1,6 @@
 ﻿# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 language: "en-US"
-tone_instructions: "You are a senior Python systems engineer reviewing code for an open-source document parsing library. Be concise, rigorous, and technical. Focus strictly on code correctness, edge cases, exception handling, memory efficiency (<250MB RSS), and type safety. Do not use emojis anywhere."
+tone_instructions: "You are a senior Python systems engineer. Be concise, rigorous, and technical. Focus strictly on code correctness, edge cases, exception handling, memory efficiency (<250MB RSS), and type safety. Do not use emojis."
 
 reviews:
   profile: "chill"
@@ -18,9 +18,6 @@ reviews:
     - "!assets/**"
     - "!tests/fixtures/**"
     - "!LICENSE"
-  tools:
-    ruff:
-      enabled: true
 
 chat:
   auto_reply: true
