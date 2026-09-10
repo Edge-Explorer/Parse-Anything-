@@ -1,16 +1,38 @@
-# benchmarks
+# Benchmarks
 
-The enchmarks module contains benchmark suites for assessing parser memory limits, messy document parsing accuracy, and evaluating 15 frontier LLMs against local CPU document parsing.
+The benchmarks directory provides reproducible evaluation suites for measuring parser memory bounds, throughput latency, messy document layout accuracy, and standardized metrics against industry-standard document parsing engines.
 
 ---
 
-## Files and Modules
+## Active Benchmark Suites
 
-| File | Purpose | Key Classes / Functions |
+| File | Purpose | Key Metrics / Functions |
 |---|---|---|
-| memory_profile.py | Benchmarks RSS memory consumption across 1000+ page streaming documents. | profile_memory() |
-| 	est_messy_document.py | Evaluates parsing accuracy on complex multi-column and noisy layout documents. | 
-un_messy_doc_test() |
-| 
-un_llm_benchmark.py | CLI runner for benchmarking 15 LLM provider models against local extraction. | main() |
-| providers/ | Submodule containing API wrappers and evaluation logic for 15 LLM providers. | See providers/README.md |
+| memory_profile.py | Evaluates peak RSS memory consumption and heap allocations across streaming documents (100 to 1,000+ pages). | Asserts RSS delta <= 250 MB and heap <= 200 MB via profile_memory(). |
+| test_messy_document.py | Evaluates extraction quality on complex multi-column, rotated, noisy, and borderless table layouts. | run_messy_doc_test() |
+
+---
+
+## Standardized Document Evaluation Harness (Planned)
+
+The benchmark harness is expanding to include ground-truth quantitative metrics:
+
+1. **Table Structure Recognition (TEDS):** Tree-Edit-Distance-based Similarity against PubTables-1M and ICDAR ground truth tables.
+2. **OCR Accuracy (CER / WER):** Character and Word Error Rate on labeled scanned corpora.
+3. **Head-to-Head Comparative Baselines:** Local CPU execution benchmarks comparing Universal Doc Parser directly with **IBM Docling**, **Surya / Marker**, and **Unstructured.io**.
+
+---
+
+## Running Benchmarks
+
+Run the memory profiling suite:
+
+`ash
+uv run python benchmarks/memory_profile.py
+`
+
+Run the messy document layout test:
+
+`ash
+uv run python benchmarks/test_messy_document.py
+`
