@@ -44,8 +44,14 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --all-extras --frozen
 
+      - name: Check Formatting with Ruff
+        run: uv run ruff format --check .
+
       - name: Lint with Ruff
         run: uv run ruff check .
 
       - name: Run Test Suite
         run: uv run pytest -v
+
+      - name: Verify Memory Limit (<250MB RSS)
+        run: uv run python benchmarks/memory_profile.py

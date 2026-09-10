@@ -96,10 +96,12 @@ def run_memory_benchmark(max_allowed_mb: float = 250.0) -> bool:
     peak_traced_mb = peak_traced_mem / (1024 * 1024)
 
     # Cleanup fixture
+    import shutil
+
     if pdf_path.exists():
-        pdf_path.unlink()
+        pdf_path.unlink(missing_ok=True)
     if bench_dir.exists():
-        bench_dir.rmdir()
+        shutil.rmtree(bench_dir, ignore_errors=True)
 
     print("\n---------------- RESULTS ----------------")
     print(f"Total Elements Extracted: {len(doc.content_tree)}")
