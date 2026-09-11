@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from benchmarks.metrics.ocr_eval import compute_cer, compute_wer, levenshtein_distance
-from benchmarks.metrics.teds import TEDS, TableTree
+from benchmarks.metrics.teds import TEDS
 
 
 def test_levenshtein_distance_strings():
