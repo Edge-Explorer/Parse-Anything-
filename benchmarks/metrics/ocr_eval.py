@@ -2,32 +2,32 @@ from __future__ import annotations
 
 
 def levenshtein_distance(seq1: str | list[str], seq2: str | list[str]) -> int:
-    """Calculate minimum edit distance (Levenshtein) between two strings or token sequences.
-
-    Supports both character strings (for CER) and word lists (for WER).
-    """
+    """Calculate minimum edit distance with O(min(m, n)) space complexity using two rolling rows."""
     if not seq1:
         return len(seq2)
     if not seq2:
         return len(seq1)
 
-    m, n = len(seq1), len(seq2)
-    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    if len(seq1) < len(seq2):
+        seq1, seq2 = seq2, seq1
 
-    for i in range(m + 1):
-        dp[i][0] = i
-    for j in range(n + 1):
-        dp[0][j] = j
+    m, n = len(seq1), len(seq2)
+    prev_row = list(range(n + 1))
+    curr_row = [0] * (n + 1)
 
     for i in range(1, m + 1):
+        curr_row[0] = i
+        elem1 = seq1[i - 1]
         for j in range(1, n + 1):
-            cost = 0 if seq1[i - 1] == seq2[j - 1] else 1
-            dp[i][j] = min(
-                dp[i - 1][j] + 1,  # deletion
-                dp[i][j - 1] + 1,  # insertion
-                dp[i - 1][j - 1] + cost,  # substitution
+            cost = 0 if elem1 == seq2[j - 1] else 1
+            curr_row[j] = min(
+                prev_row[j] + 1,  # deletion
+                curr_row[j - 1] + 1,  # insertion
+                prev_row[j - 1] + cost,  # substitution
             )
-    return dp[m][n]
+
+        prev_row, curr_row = curr_row, prev_row
+    return prev_row[n]
 
 
 def compute_cer(reference_text: str, predicted_text: str, ignore_case: bool = False) -> float:
