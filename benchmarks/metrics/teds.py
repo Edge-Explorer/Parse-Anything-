@@ -91,7 +91,7 @@ class TEDS:
         return 0.0
 
     def tree_edit_distance(self, tree_a: TableTree, tree_b: TableTree) -> float:
-        """Compute recursive tree edit distance between two TableTree instances."""
+        """Compute recursive tree edit distance between two TableTree instances with rolling DP memory."""
         memo: dict[tuple[int, int], float] = {}
 
         def _ted(n1: TableTree, n2: TableTree) -> float:
@@ -103,26 +103,32 @@ class TEDS:
 
             # Match children via sequence alignment DP
             m, n = len(n1.children), len(n2.children)
-            dp = [[0.0] * (n + 1) for _ in range(m + 1)]
+            if m == 0 and n == 0:
+                return cost
+            if m == 0:
+                return cost + sum(c.size() for c in n2.children)
+            if n == 0:
+                return cost + sum(c.size() for c in n1.children)
 
-            for i in range(1, m + 1):
-                dp[i][0] = dp[i - 1][0] + n1.children[i - 1].size()
+            # Match children via 2-row rolling sequence alignment
+            prev_dp = [0.0] * (n + 1)
             for j in range(1, n + 1):
-                dp[0][j] = dp[0][j - 1] + n2.children[j - 1].size()
-
+                prev_dp[j] = prev_dp[j - 1] + n2.children[j - 1].size()
+            curr_dp = [0.0] * (n + 1)
             for i in range(1, m + 1):
+                child_a = n1.children[i - 1]
+                curr_dp[0] = prev_dp[0] + child_a.size()
                 for j in range(1, n + 1):
-                    child_a = n1.children[i - 1]
                     child_b = n2.children[j - 1]
                     sub_cost = _ted(child_a, child_b)
-
-                    dp[i][j] = min(
-                        dp[i - 1][j] + child_a.size(),  # delete child_a
-                        dp[i][j - 1] + child_b.size(),  # insert child_b
-                        dp[i - 1][j - 1] + sub_cost,  # match/substitute
+                    curr_dp[j] = min(
+                        prev_dp[j] + child_a.size(),  # delete child_a
+                        curr_dp[j - 1] + child_b.size(),  # insert child_b
+                        prev_dp[j - 1] + sub_cost,  # match/substitute
                     )
+                prev_dp, curr_dp = curr_dp, prev_dp
 
-            total_dist = cost + dp[m][n]
+            total_dist = cost + prev_dp[n]
             memo[key] = total_dist
             return total_dist
 
