@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import html
-import io
-import math
-import random
 import tempfile
 import time
 from dataclasses import dataclass
@@ -141,9 +138,7 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
         d.text((30, 30), "Universal Parser Engine", fill="black")
         d.text((30, 80), "High Fidelity Document Normalization", fill="black")
         img.save(str(clean_img_path))
-        gt_clean_ocr = (
-            "Universal Parser Engine\nHigh Fidelity Document Normalization"
-        )
+        gt_clean_ocr = "Universal Parser Engine\nHigh Fidelity Document Normalization"
 
         t0 = time.perf_counter()
         doc = parse(str(clean_img_path))
@@ -167,7 +162,9 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
         # TIER B: STRESS / DEGRADED SCANS & BORDERLESS TABLES (n=15)
         # =====================================================================
 
-        base_ocr_text = "Quarterly Financial Audit Report\nTotal Net Revenue Increased By Twelve Percent"
+        base_ocr_text = (
+            "Quarterly Financial Audit Report\nTotal Net Revenue Increased By Twelve Percent"
+        )
 
         # OCR-02: 3° Clockwise Skew
         p = tmp_path / "skew_3deg.png"
@@ -175,9 +172,7 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
             -3, resample=Image.BICUBIC, fillcolor="white"
         ).save(str(p))
         results.append(
-            _eval_ocr_sample(
-                "OCR-02", "3° Skewed Scan", p, base_ocr_text, "Tier B (Stress)"
-            )
+            _eval_ocr_sample("OCR-02", "3° Skewed Scan", p, base_ocr_text, "Tier B (Stress)")
         )
 
         # OCR-03: 7° Counter-Clockwise Skew
@@ -199,9 +194,7 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
         p = tmp_path / "low_dpi.png"
         base_img = _create_base_ocr_image(base_ocr_text)
         w, h = base_img.size
-        base_img.resize((w // 2, h // 2), Image.BILINEAR).resize(
-            (w, h), Image.NEAREST
-        ).save(str(p))
+        base_img.resize((w // 2, h // 2), Image.BILINEAR).resize((w, h), Image.NEAREST).save(str(p))
         results.append(
             _eval_ocr_sample(
                 "OCR-04",
@@ -214,9 +207,9 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
 
         # OCR-05: Gaussian Blurred Scan
         p = tmp_path / "blur.png"
-        _create_base_ocr_image(base_ocr_text).filter(
-            ImageFilter.GaussianBlur(radius=1.5)
-        ).save(str(p))
+        _create_base_ocr_image(base_ocr_text).filter(ImageFilter.GaussianBlur(radius=1.5)).save(
+            str(p)
+        )
         results.append(
             _eval_ocr_sample(
                 "OCR-05",
@@ -243,9 +236,7 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
 
         # OCR-07: Salt-and-Pepper Noise Scan
         p = tmp_path / "sp_noise.png"
-        img_arr = np.array(
-            _create_base_ocr_image(base_ocr_text).convert("L")
-        )
+        img_arr = np.array(_create_base_ocr_image(base_ocr_text).convert("L"))
         noise_mask = np.random.rand(*img_arr.shape)
         img_arr[noise_mask < 0.03] = 0
         img_arr[noise_mask > 0.97] = 255
@@ -274,7 +265,9 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
         )
 
         # OCR-09: Dense Multi-Column Invoice Layout
-        dense_text = "INVOICE #94012\nQTY ITEM PRICE TOTAL\n2 Server RAM $300 $600\n1 NVMe SSD $150 $150"
+        dense_text = (
+            "INVOICE #94012\nQTY ITEM PRICE TOTAL\n2 Server RAM $300 $600\n1 NVMe SSD $150 $150"
+        )
         p = tmp_path / "dense_invoice.png"
         _create_base_ocr_image(dense_text, height=220).save(str(p))
         results.append(
@@ -362,9 +355,7 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
     return results
 
 
-def _create_base_ocr_image(
-    text: str, width: int = 650, height: int = 160
-) -> Image.Image:
+def _create_base_ocr_image(text: str, width: int = 650, height: int = 160) -> Image.Image:
     img = Image.new("RGB", (width, height), color="white")
     d = ImageDraw.Draw(img)
     lines = text.split("\n")
@@ -375,9 +366,7 @@ def _create_base_ocr_image(
     return img
 
 
-def _eval_ocr_sample(
-    s_id: str, name: str, path: Path, gt_text: str, tier: str
-) -> EvalSampleResult:
+def _eval_ocr_sample(s_id: str, name: str, path: Path, gt_text: str, tier: str) -> EvalSampleResult:
     t0 = time.perf_counter()
     doc = parse(str(path))
     ms = (time.perf_counter() - t0) * 1000
@@ -398,14 +387,8 @@ def _eval_ocr_sample(
 def _extract_first_table_html(doc) -> str:
     for elem in doc.content_tree:
         if isinstance(elem.data, TableData):
-            headers_html = "".join(
-                f"<th>{html.escape(str(h))}</th>" for h in elem.data.headers
-            )
-            thead = (
-                f"<thead><tr>{headers_html}</tr></thead>"
-                if headers_html
-                else ""
-            )
+            headers_html = "".join(f"<th>{html.escape(str(h))}</th>" for h in elem.data.headers)
+            thead = f"<thead><tr>{headers_html}</tr></thead>" if headers_html else ""
             rows_html = "".join(
                 f"<tr>{''.join(f'<td>{html.escape(str(cell))}</td>' for cell in row)}</tr>"
                 for row in elem.data.rows
@@ -437,9 +420,7 @@ def main() -> None:
 
     # Tier B reporting
     tier_b = [r for r in results if r.tier == "Tier B (Stress)"]
-    print(
-        f"\n[TIER B: STRESS / DEGRADED SCANS & BORDERLESS SUITE] (n={len(tier_b)})"
-    )
+    print(f"\n[TIER B: STRESS / DEGRADED SCANS & BORDERLESS SUITE] (n={len(tier_b)})")
     print("-" * 88)
     for r in tier_b:
         print(
@@ -451,32 +432,16 @@ def main() -> None:
     tier_b_ocr = [r for r in tier_b if r.category == "ocr"]
     tier_b_tbl = [r for r in tier_b if r.category == "table"]
 
-    avg_teds = (
-        sum(r.metric_1_val for r in tier_b_tbl) / len(tier_b_tbl) * 100
-        if tier_b_tbl
-        else 0
-    )
-    avg_cer = (
-        sum(r.metric_1_val for r in tier_b_ocr) / len(tier_b_ocr) * 100
-        if tier_b_ocr
-        else 0
-    )
-    avg_wer = (
-        sum(r.metric_2_val for r in tier_b_ocr) / len(tier_b_ocr) * 100
-        if tier_b_ocr
-        else 0
-    )
+    avg_teds = sum(r.metric_1_val for r in tier_b_tbl) / len(tier_b_tbl) * 100 if tier_b_tbl else 0
+    avg_cer = sum(r.metric_1_val for r in tier_b_ocr) / len(tier_b_ocr) * 100 if tier_b_ocr else 0
+    avg_wer = sum(r.metric_2_val for r in tier_b_ocr) / len(tier_b_ocr) * 100 if tier_b_ocr else 0
 
     print("\n" + "=" * 88)
     print(" FIXED REFERENCE BASELINE SUMMARY (LOCKED FOR PHASE 2 / 3 COMPARISON)")
     print("-" * 88)
-    print(f"  --> Tier A Control Table TEDS: 100.0% | Tier A Control OCR CER: 0.0%")
-    print(
-        f"  --> Tier B Starting Table TEDS: {avg_teds:5.1f}%"
-    )
-    print(
-        f"  --> Tier B Starting OCR CER:   {avg_cer:5.1f}%  |  Starting OCR WER: {avg_wer:5.1f}%"
-    )
+    print("  --> Tier A Control Table TEDS: 100.0% | Tier A Control OCR CER: 0.0%")
+    print(f"  --> Tier B Starting Table TEDS: {avg_teds:5.1f}%")
+    print(f"  --> Tier B Starting OCR CER:   {avg_cer:5.1f}%  |  Starting OCR WER: {avg_wer:5.1f}%")
 
     end_rss = process.memory_info().rss / (1024 * 1024)
     print(
