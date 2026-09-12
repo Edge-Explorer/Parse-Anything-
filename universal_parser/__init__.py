@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 import universal_parser.extractors.images.scan_extractor
 import universal_parser.extractors.mail.mail_extractor
