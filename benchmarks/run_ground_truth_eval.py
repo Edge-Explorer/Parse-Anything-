@@ -174,7 +174,7 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
             EvalSampleResult(
                 "DOC-01",
                 "Clean Structured Text Document",
-                "ocr",
+                "text",
                 "Tier A (Clean)",
                 "CER",
                 compute_cer(gt_doc_text, text, ignore_case=True),
@@ -354,16 +354,16 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
             (
                 "TBL-02",
                 "Multi-Line Wrapped Cells Table",
-                "ID,Description,Status\n101,Core architectural normalization layer,Completed\n102,Memory optimization and streaming bounds,Validated",
-                "<table><thead><tr><th>ID</th><th>Description</th><th>Status</th></tr></thead><tbody><tr><td>101</td><td>Core architectural normalization layer</td><td>Completed</td></tr><tr><td>102</td><td>Memory optimization and streaming bounds</td><td>Validated</td></tr></tbody></table>",
+                'ID,Description,Status\n101,"Core architectural\nnormalization layer",Completed\n102,"Memory optimization\nand streaming bounds",Validated',
+                "<table><thead><tr><th>ID</th><th>Description</th><th>Status</th></tr></thead><tbody><tr><td>101</td><td>Core architectural\nnormalization layer</td><td>Completed</td></tr><tr><td>102</td><td>Memory optimization\nand streaming bounds</td><td>Validated</td></tr></tbody></table>",
                 "csv",
             ),
             (
                 "TBL-03",
                 "2-Tier Nested Header Table",
-                "Metric,Q1_Actual,Q1_Target,Q2_Actual,Q2_Target\nLatency,14ms,20ms,12ms,18ms\nThroughput,95pps,80pps,110pps,90pps",
-                "<table><thead><tr><th>Metric</th><th>Q1_Actual</th><th>Q1_Target</th><th>Q2_Actual</th><th>Q2_Target</th></tr></thead><tbody><tr><td>Latency</td><td>14ms</td><td>20ms</td><td>12ms</td><td>18ms</td></tr><tr><td>Throughput</td><td>95pps</td><td>80pps</td><td>110pps</td><td>90pps</td></tr></tbody></table>",
-                "csv",
+                "<table><thead><tr><th rowspan='2'>Metric</th><th colspan='2'>Q1</th><th colspan='2'>Q2</th></tr><tr><th>Actual</th><th>Target</th><th>Actual</th><th>Target</th></tr></thead><tbody><tr><td>Latency</td><td>14ms</td><td>20ms</td><td>12ms</td><td>18ms</td></tr><tr><td>Throughput</td><td>95pps</td><td>80pps</td><td>110pps</td><td>90pps</td></tr></tbody></table>",
+                "<table><thead><tr><th rowspan='2'>Metric</th><th colspan='2'>Q1</th><th colspan='2'>Q2</th></tr><tr><th>Actual</th><th>Target</th><th>Actual</th><th>Target</th></tr></thead><tbody><tr><td>Latency</td><td>14ms</td><td>20ms</td><td>12ms</td><td>18ms</td></tr><tr><td>Throughput</td><td>95pps</td><td>80pps</td><td>110pps</td><td>90pps</td></tr></tbody></table>",
+                "html_table",
             ),
             (
                 "TBL-04",
@@ -465,6 +465,12 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
                     headers=raw_content["headers"],
                     rows=raw_content["rows"],
                     col_x_positions=raw_content["col_x"],
+                )
+            elif fmt == "html_table":
+                tbl_file = tmp_path / f"{s_id}.html"
+                tbl_file.write_text(
+                    f"<html><body>{raw_content}</body></html>",
+                    encoding="utf-8",
                 )
             else:  # csv
                 tbl_file = tmp_path / f"{s_id}.csv"
@@ -582,11 +588,15 @@ def main() -> None:
 
     # Summary Statistics
     tier_a_tbl = [r for r in tier_a if r.category == "table"]
+    tier_a_text = [r for r in tier_a if r.category == "text"]
     tier_a_ocr = [r for r in tier_a if r.category == "ocr"]
     tier_b_ocr = [r for r in tier_b if r.category == "ocr"]
     tier_b_tbl = [r for r in tier_b if r.category == "table"]
 
     avg_a_tbl = sum(r.metric_1_val for r in tier_a_tbl) / len(tier_a_tbl) * 100 if tier_a_tbl else 0
+    avg_a_text = (
+        sum(r.metric_1_val for r in tier_a_text) / len(tier_a_text) * 100 if tier_a_text else 0
+    )
     avg_a_ocr = sum(r.metric_1_val for r in tier_a_ocr) / len(tier_a_ocr) * 100 if tier_a_ocr else 0
 
     avg_b_tbl = sum(r.metric_1_val for r in tier_b_tbl) / len(tier_b_tbl) * 100 if tier_b_tbl else 0
@@ -597,7 +607,7 @@ def main() -> None:
     print(" FIXED REFERENCE BASELINE SUMMARY (LOCKED FOR PHASE 2 / 3 COMPARISON)")
     print("-" * 88)
     print(
-        f"  --> Tier A Control Table TEDS: {avg_a_tbl:5.1f}% | Tier A Control OCR CER: {avg_a_ocr:5.1f}%"
+        f"  --> Tier A Table TEDS:         {avg_a_tbl:5.1f}% | Tier A Text CER: {avg_a_text:5.1f}% | Tier A OCR CER: {avg_a_ocr:5.1f}%"
     )
     print(f"  --> Tier B Starting Table TEDS: {avg_b_tbl:5.1f}% (Real Heuristic Ceiling)")
     print(
