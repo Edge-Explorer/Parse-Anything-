@@ -216,16 +216,16 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
             "Quarterly Financial Audit Report\nTotal Net Revenue Increased By Twelve Percent"
         )
 
-        # OCR-02: 10° Clockwise Skew
+        # OCR-02: 10 deg Clockwise Skew
         p = tmp_path / "skew_10deg.png"
         _create_base_ocr_image(base_ocr_text).rotate(
             -10, resample=Image.BICUBIC, fillcolor="white"
         ).save(str(p))
         results.append(
-            _eval_ocr_sample("OCR-02", "10° Skewed Scan", p, base_ocr_text, "Tier B (Stress)")
+            _eval_ocr_sample("OCR-02", "10 deg Skewed Scan", p, base_ocr_text, "Tier B (Stress)")
         )
 
-        # OCR-03: 20° Counter-Clockwise Skew
+        # OCR-03: 20 deg Counter-Clockwise Skew
         p = tmp_path / "skew_20deg.png"
         _create_base_ocr_image(base_ocr_text).rotate(
             20, resample=Image.BICUBIC, fillcolor="white"
@@ -233,7 +233,7 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
         results.append(
             _eval_ocr_sample(
                 "OCR-03",
-                "20° Skewed Severe Scan",
+                "20 deg Skewed Severe Scan",
                 p,
                 base_ocr_text,
                 "Tier B (Stress)",
@@ -263,7 +263,7 @@ def run_dual_tier_evaluation() -> list[EvalSampleResult]:
         results.append(
             _eval_ocr_sample(
                 "OCR-05",
-                "Gaussian Blurred Scan (σ=1.5)",
+                "Gaussian Blurred Scan (sigma=1.5)",
                 p,
                 base_ocr_text,
                 "Tier B (Stress)",
@@ -561,7 +561,7 @@ def main() -> None:
     start_rss = process.memory_info().rss / (1024 * 1024)
 
     print("\n" + "=" * 88)
-    print(" UNIVERSAL DOC PARSER — DUAL-TIER GROUND TRUTH BENCHMARK REPORT (n=20)")
+    print(" UNIVERSAL DOC PARSER -- DUAL-TIER GROUND TRUTH BENCHMARK REPORT (n=20)")
     print("=" * 88)
 
     results = run_dual_tier_evaluation()
