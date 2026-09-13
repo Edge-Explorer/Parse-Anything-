@@ -4,6 +4,35 @@ All notable changes to this project are documented in this file. Entries are org
 
 ---
 
+## [1.0.3]
+
+### Release Context
+
+Major benchmark infrastructure and evaluation release establishing standardized Tree-Edit-Distance-based Similarity (TEDS), Character Error Rate (CER), Word Error Rate (WER) metrics, and a reproducible 20-sample dual-tier ground truth evaluation harness across clean controls and adversarial real-world stress conditions.
+
+### Added
+
+- Tree-Edit-Distance-based Similarity (`benchmarks/metrics/teds.py`) for evaluating HTML table DOM structural similarity with memoized tree comparison and O(min(m, n)) space complexity.
+- Character Error Rate (CER) and Word Error Rate (WER) evaluation suite (`benchmarks/metrics/ocr_eval.py`) implementing a two-row rolling-memory Wagner-Fischer dynamic programming algorithm.
+- Automated metric unit test suite (`tests/test_metrics.py`) validating TEDS, CER, and WER computations across exact matches, structural substitutions, deletions, and edge cases.
+- Dual-tier ground truth evaluation benchmark harness (`benchmarks/run_ground_truth_eval.py`) evaluating n=20 document scenarios:
+  - **Tier A (Clean Controls, n=5):** HTML table, CSV table, TSV table, structured native text, and high-resolution clean scans.
+  - **Tier B (Adversarial Stress Baseline, n=15):** Angular skew (10 deg, 20 deg), low DPI, Gaussian blur, low contrast (35%), deterministic salt-and-pepper noise, heavy JPEG compression artifacts (Q=15), dense financial invoices, borderless ReportLab PDFs, RFC 4180 multiline CSVs, nested HTML tables, dense 8-column matrices, raster pixel grid image tables, irregular columns, and noisy scanned table blocks.
+- Reference baseline measurement lock establishing Tier A Table TEDS at 100.0%, Tier A Text CER at 0.0%, Tier A OCR CER at 5.3%, Tier B Starting Table TEDS at 72.1%, Tier B Starting OCR CER at 9.0%, Tier B Starting WER at 56.8%, and Memory RSS bounded at 154.34 MB (Delta: 29.38 MB).
+- Automated pull request review and summarization workflows using Google Gemini and CodeRabbit.
+
+### Changed
+
+- Raised minimum Pillow dependency constraint to `pillow>=10.1.0` in `pyproject.toml` for `ImageFont.load_default(size=...)` compatibility across synthetic document generators.
+- Hardened synthetic document rendering scale to 1000x240px at 32px glyph size (standard 300 DPI scan scale) to eliminate low-resolution word boundary clipping artifacts in WER evaluation.
+
+### Fixed
+
+- Replaced unseeded random noise generation in adversarial benchmarks with deterministic NumPy bit generators (`np.random.default_rng(seed=42)`) to ensure exact bit-level test reproducibility.
+- Corrected Wagner-Fischer memory footprint to strict two-row buffer rolling allocation.
+
+---
+
 ## [1.0.2]
 
 ### Release Context
