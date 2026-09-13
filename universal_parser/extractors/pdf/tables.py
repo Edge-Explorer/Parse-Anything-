@@ -1,22 +1,26 @@
-from __future__ import annotations
-
+import cv2
+import numpy as np
 import pdfplumber
 
 from universal_parser.core.schema import TableData
+from universal_parser.extractors.tables.opencv_ensemble import OpenCVTableEnsemble
 
 
 class PDFTableExtractor:
     """
-    Handles bordered (Lattice) and borderless (Stream) table extraction from PDF pages.
+    Handles bordered (Lattice), borderless (Stream), and rasterized (Visual OpenCV)
+    table extraction from PDF pages.
 
     Provides:
-        - Bordered table extraction via coordinate grid mapping
+        - Bordered vector table extraction via coordinate grid mapping
         - Borderless table extraction via whitespace column clustering
+        - Raster visual table extraction via OpenCV morphological lattice detection
         - Confidence scoring based on layout density and cell consistency
     """
 
     def __init__(self, page: pdfplumber.page.Page):
         self.page = page
+        self._visual_ensemble = OpenCVTableEnsemble()
 
     def extract_tables(self) -> list[dict]:
         """
@@ -33,7 +37,7 @@ class PDFTableExtractor:
 
         tables = []
 
-        # 1. Try Lattice extraction first (bordered tables)
+        # 1. Try Lattice extraction first (bordered vector tables)
         lattice_tables = self._extract_lattice()
         if lattice_tables:
             tables.extend(lattice_tables)
@@ -45,6 +49,12 @@ class PDFTableExtractor:
             stream_tables = self._extract_stream()
             if stream_tables:
                 tables.extend(stream_tables)
+
+        # 3. Fallback to Visual OpenCV Lattice extraction for raster/scanned image pages
+        if not tables:
+            visual_tables = self._extract_visual_lattice()
+            if visual_tables:
+                tables.extend(visual_tables)
 
         return tables
 
@@ -149,7 +159,48 @@ class PDFTableExtractor:
                         "confidence": 0.85,
                     }
                 )
-        except Exception:  # noqa: BLE001
+        except (ValueError, KeyError, IndexError, TypeError):
             return []
 
         return extracted
+
+    def _extract_visual_lattice(self) -> list[dict]:
+        """Extract tables from rasterized or image-based PDF pages using OpenCV visual lines."""
+        try:
+            if not self.page.images:
+                return []
+
+            page_img = self.page.to_image(resolution=150).original
+            np_img = cv2.cvtColor(np.array(page_img), cv2.COLOR_RGB2BGR)
+
+            words = self.page.extract_words()
+            scale_x = np_img.shape[1] / float(self.page.width)
+            scale_y = np_img.shape[0] / float(self.page.height)
+
+            ocr_tokens = []
+            for w in words:
+                x0 = float(w["x0"]) * scale_x
+                y0 = float(w["top"]) * scale_y
+                x1 = float(w["x1"]) * scale_x
+                y1 = float(w["bottom"]) * scale_y
+                ocr_tokens.append(((x0, y0, x1, y1), w["text"], 1.0))
+
+            res = self._visual_ensemble.extract_tables_from_image(np_img, ocr_tokens)
+            extracted = []
+            for r in res:
+                pdf_bbox = (
+                    r.bbox.x0 / scale_x,
+                    r.bbox.y0 / scale_y,
+                    r.bbox.x1 / scale_x,
+                    r.bbox.y1 / scale_y,
+                )
+                extracted.append(
+                    {
+                        "data": r.data,
+                        "bbox": pdf_bbox,
+                        "confidence": r.confidence,
+                    }
+                )
+            return extracted
+        except (cv2.error, ValueError, KeyError, TypeError, IndexError):
+            return []
