@@ -41,11 +41,17 @@ class OpenCVTableEnsemble:
         min_table_height: int = 40,
         min_rows: int = 2,
         min_cols: int = 2,
+        max_cols: int = 30,
+        min_cell_width: int = 25,
+        min_cell_height: int = 15,
     ) -> None:
         self.min_table_width = min_table_width
         self.min_table_height = min_table_height
         self.min_rows = min_rows
         self.min_cols = min_cols
+        self.max_cols = max_cols
+        self.min_cell_width = min_cell_width
+        self.min_cell_height = min_cell_height
 
     def extract_tables_from_image(
         self,
@@ -78,9 +84,9 @@ class OpenCVTableEnsemble:
         # Step 2: Inverted Binarization (preserve 1px thin lines without destructive median filter)
         _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
-        # Dynamic scale factors based on image dimensions
-        h_scale = max(18, w_img // 28)
-        v_scale = max(18, h_img // 18)
+        # Dynamic scale factors based on image dimensions (must be larger than character heights/widths)
+        h_scale = max(35, w_img // 15)
+        v_scale = max(30, h_img // 12)
 
         # Pre-closing to bridge 1px thin or broken lines
         closed_thresh = cv2.morphologyEx(
@@ -130,15 +136,25 @@ class OpenCVTableEnsemble:
             sub_v = v_lines[ty : ty + th, tx : tx + tw]
 
             # Horizontal Line Y-Coordinates via Projection Profile
+            # Requiring 0.50 line length ensures genuine table horizontal dividers (spanning >= 50%
+            # of table width) are detected, while text line glyph clusters (spanning 20-35%) are ignored.
             h_proj = np.sum(sub_h > 0, axis=1)
             h_line_ys = self._detect_line_positions(
-                h_proj, expected_line_length=tw, threshold_ratio=0.30, offset=ty
+                h_proj,
+                expected_line_length=tw,
+                threshold_ratio=0.50,
+                offset=ty,
+                min_dist=self.min_cell_height,
             )
 
             # Vertical Line X-Coordinates via Projection Profile
             v_proj = np.sum(sub_v > 0, axis=0)
             v_line_xs = self._detect_line_positions(
-                v_proj, expected_line_length=th, threshold_ratio=0.30, offset=tx
+                v_proj,
+                expected_line_length=th,
+                threshold_ratio=0.50,
+                offset=tx,
+                min_dist=self.min_cell_width,
             )
 
             if len(h_line_ys) < 2 or len(v_line_xs) < 2:
@@ -147,7 +163,7 @@ class OpenCVTableEnsemble:
             num_rows = len(h_line_ys) - 1
             num_cols = len(v_line_xs) - 1
 
-            if num_rows < self.min_rows or num_cols < self.min_cols:
+            if num_rows < self.min_rows or num_cols < self.min_cols or num_cols > self.max_cols:
                 continue
 
             # Reconstruct 2D cell grid and assign OCR tokens
@@ -181,6 +197,12 @@ class OpenCVTableEnsemble:
                 grid_data.append(row_data)
 
             if len(grid_data) < self.min_rows:
+                continue
+
+            # Reject false table candidates where a large grid (>6 cells) contains <=1 recognized token,
+            # indicating a background border, diagram frame, or code box rather than a populated table.
+            total_cells = num_rows * num_cols
+            if total_cells > 6 and non_empty_cells <= 1:
                 continue
 
             headers = grid_data[0]
@@ -222,6 +244,7 @@ class OpenCVTableEnsemble:
         expected_line_length: int,
         threshold_ratio: float,
         offset: int,
+        min_dist: int = 20,
     ) -> list[int]:
         """Detect central coordinates of continuous line segments in a projection profile."""
         threshold = threshold_ratio * expected_line_length
@@ -238,10 +261,14 @@ class OpenCVTableEnsemble:
                 if in_line:
                     in_line = False
                     mid_idx = (start_idx + idx) // 2
-                    positions.append(offset + mid_idx)
+                    pos = offset + mid_idx
+                    if not positions or (pos - positions[-1] >= min_dist):
+                        positions.append(pos)
 
         if in_line:
             mid_idx = (start_idx + len(projection) - 1) // 2
-            positions.append(offset + mid_idx)
+            pos = offset + mid_idx
+            if not positions or (pos - positions[-1] >= min_dist):
+                positions.append(pos)
 
         return positions
