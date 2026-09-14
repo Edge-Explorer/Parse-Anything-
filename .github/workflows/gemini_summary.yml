@@ -1,9 +1,11 @@
-﻿name: Gemini PR Summary
+name: Gemini PR Code Review & Summary
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: ["main"]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -12,7 +14,14 @@ permissions:
 
 jobs:
   summarize:
-    name: Generate Gemini Summary
+    name: Generate Gemini PR Summary & Review
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       (startsWith(github.event.comment.body, '/gemini') ||
+        startsWith(github.event.comment.body, '/ci gemini') ||
+        startsWith(github.event.comment.body, '/review')))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
