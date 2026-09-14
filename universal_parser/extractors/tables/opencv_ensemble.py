@@ -84,9 +84,10 @@ class OpenCVTableEnsemble:
         # Step 2: Inverted Binarization (preserve 1px thin lines without destructive median filter)
         _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
-        # Dynamic scale factors based on image dimensions (must be larger than character heights/widths)
-        h_scale = max(35, w_img // 15)
-        v_scale = max(30, h_img // 12)
+        # Dynamic scale factors based on image dimensions (capped to minimum supported table size)
+        # Capping ensures high-resolution images (e.g. 2000x2000) do not inflate kernels beyond table dimensions.
+        h_scale = min(self.min_table_width // 2, max(30, w_img // 15))
+        v_scale = min(self.min_table_height // 2, max(25, h_img // 12))
 
         # Pre-closing to bridge 1px thin or broken lines
         closed_thresh = cv2.morphologyEx(
@@ -144,7 +145,6 @@ class OpenCVTableEnsemble:
                 expected_line_length=tw,
                 threshold_ratio=0.50,
                 offset=ty,
-                min_dist=self.min_cell_height,
             )
 
             # Vertical Line X-Coordinates via Projection Profile
@@ -154,7 +154,6 @@ class OpenCVTableEnsemble:
                 expected_line_length=th,
                 threshold_ratio=0.50,
                 offset=tx,
-                min_dist=self.min_cell_width,
             )
 
             if len(h_line_ys) < 2 or len(v_line_xs) < 2:
@@ -164,6 +163,15 @@ class OpenCVTableEnsemble:
             num_cols = len(v_line_xs) - 1
 
             if num_rows < self.min_rows or num_cols < self.min_cols or num_cols > self.max_cols:
+                continue
+
+            # Reject candidate if any detected row or column is too narrow (e.g. character stroke artifacts)
+            # rather than silently coalescing distinct grid boundaries.
+            row_heights = [h_line_ys[i + 1] - h_line_ys[i] for i in range(num_rows)]
+            col_widths = [v_line_xs[i + 1] - v_line_xs[i] for i in range(num_cols)]
+            if any(rh < self.min_cell_height for rh in row_heights) or any(
+                cw < self.min_cell_width for cw in col_widths
+            ):
                 continue
 
             # Reconstruct 2D cell grid and assign OCR tokens
@@ -201,16 +209,20 @@ class OpenCVTableEnsemble:
 
             # Reject false table candidates where a large grid (>6 cells) contains <=1 recognized token,
             # indicating a background border, diagram frame, or code box rather than a populated table.
+            # Skip this check in geometry-only extraction mode (when ocr_tokens is None or empty).
             total_cells = num_rows * num_cols
-            if total_cells > 6 and non_empty_cells <= 1:
+            if (
+                ocr_tokens is not None
+                and len(ocr_tokens) > 0
+                and total_cells > 6
+                and non_empty_cells <= 1
+            ):
                 continue
 
             headers = grid_data[0]
             data_rows = grid_data[1:]
 
             # Geometric uniformity score: measures height and width regularity across cells
-            row_heights = [h_line_ys[i + 1] - h_line_ys[i] for i in range(num_rows)]
-            col_widths = [v_line_xs[i + 1] - v_line_xs[i] for i in range(num_cols)]
             h_var = float(np.std(row_heights) / max(1.0, np.mean(row_heights)))
             w_var = float(np.std(col_widths) / max(1.0, np.mean(col_widths)))
             uniformity = max(0.0, 1.0 - 0.5 * (h_var + w_var))
@@ -244,7 +256,6 @@ class OpenCVTableEnsemble:
         expected_line_length: int,
         threshold_ratio: float,
         offset: int,
-        min_dist: int = 20,
     ) -> list[int]:
         """Detect central coordinates of continuous line segments in a projection profile."""
         threshold = threshold_ratio * expected_line_length
@@ -262,13 +273,18 @@ class OpenCVTableEnsemble:
                     in_line = False
                     mid_idx = (start_idx + idx) // 2
                     pos = offset + mid_idx
-                    if not positions or (pos - positions[-1] >= min_dist):
+                    # Merge only contiguous physical stroke pixels (<= 3px)
+                    if positions and (pos - positions[-1] <= 3):
+                        positions[-1] = (positions[-1] + pos) // 2
+                    else:
                         positions.append(pos)
 
         if in_line:
             mid_idx = (start_idx + len(projection) - 1) // 2
             pos = offset + mid_idx
-            if not positions or (pos - positions[-1] >= min_dist):
+            if positions and (pos - positions[-1] <= 3):
+                positions[-1] = (positions[-1] + pos) // 2
+            else:
                 positions.append(pos)
 
         return positions

@@ -304,3 +304,37 @@ def test_deskew_true_skewed_document_corrected() -> None:
 
     _, angle = estimate_and_deskew(cv_img, deadband_deg=0.75)
     assert abs(angle - 15.0) < 2.5
+
+
+def test_visual_table_detection_geometry_only_without_ocr_tokens() -> None:
+    """Geometry-only table extraction must detect grid cells even when ocr_tokens is None."""
+    img = Image.new("RGB", (620, 200), color="white")
+    d = ImageDraw.Draw(img)
+    d.rectangle([(20, 20), (600, 180)], outline="black", width=2)
+    d.line([(20, 70), (600, 70)], fill="black", width=2)
+    d.line([(20, 125), (600, 125)], fill="black", width=2)
+    d.line([(210, 20), (210, 180)], fill="black", width=2)
+    d.line([(410, 20), (410, 180)], fill="black", width=2)
+
+    ensemble = OpenCVTableEnsemble()
+    results = ensemble.extract_tables_from_image(np.array(img), ocr_tokens=None)
+
+    assert len(results) == 1
+    assert len(results[0].data.headers) == 3
+    assert len(results[0].data.rows) == 2
+
+
+def test_visual_table_detection_on_high_res_image() -> None:
+    """A small table on a high-res (2000x2000) canvas must not have its ruling lines eroded."""
+    img = Image.new("RGB", (2000, 2000), color="white")
+    d = ImageDraw.Draw(img)
+    d.rectangle([(500, 500), (700, 650)], outline="black", width=2)
+    d.line([(500, 575), (700, 575)], fill="black", width=2)
+    d.line([(600, 500), (600, 650)], fill="black", width=2)
+
+    ensemble = OpenCVTableEnsemble()
+    results = ensemble.extract_tables_from_image(np.array(img), ocr_tokens=None)
+
+    assert len(results) == 1
+    assert len(results[0].data.headers) == 2
+    assert len(results[0].data.rows) == 1
