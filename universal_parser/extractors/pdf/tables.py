@@ -1,9 +1,13 @@
+import logging
+
 import cv2
 import numpy as np
 import pdfplumber
 
 from universal_parser.core.schema import TableData
 from universal_parser.extractors.tables.opencv_ensemble import OpenCVTableEnsemble
+
+logger = logging.getLogger(__name__)
 
 
 class PDFTableExtractor:
@@ -159,7 +163,8 @@ class PDFTableExtractor:
                         "confidence": 0.85,
                     }
                 )
-        except (ValueError, KeyError, IndexError, TypeError):
+        except (ValueError, KeyError, IndexError, TypeError) as err:
+            logger.warning("Stream table extraction error: %s", err)
             return []
 
         return extracted
@@ -202,5 +207,6 @@ class PDFTableExtractor:
                     }
                 )
             return extracted
-        except (cv2.error, ValueError, KeyError, TypeError, IndexError):
+        except (cv2.error, ValueError, KeyError, TypeError, IndexError) as err:
+            logger.warning("Visual lattice table extraction error: %s", err)
             return []

@@ -251,3 +251,56 @@ def test_mixed_text_and_table_image() -> None:
         assert "Growth" in tables[0].data.headers[2]
         assert len(tables[0].data.rows) == 2
         assert len(paragraphs) >= 2
+
+
+def test_deskew_exact_ocr05_financial_fixture_remains_straight() -> None:
+    """Exact regression test: OCR-05 2-line financial report with Gaussian blur (sigma=1.5)."""
+    from PIL import ImageFilter
+
+    base_ocr_text = (
+        "Quarterly Financial Audit Report\nTotal Net Revenue Increased By Twelve Percent"
+    )
+    img = Image.new("RGB", (1000, 240), color="white")
+    d = ImageDraw.Draw(img)
+    font = _get_test_font(32)
+    lines = base_ocr_text.split("\n")
+    y = 40
+    for line in lines:
+        d.text((50, y), line, fill="black", font=font)
+        y += 65
+
+    blurred_img = img.filter(ImageFilter.GaussianBlur(radius=1.5))
+    cv_img = cv2.cvtColor(np.array(blurred_img), cv2.COLOR_RGB2BGR)
+
+    deskewed, angle = estimate_and_deskew(cv_img, deadband_deg=0.75)
+    assert angle == 0.0
+    assert deskewed.shape == cv_img.shape
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        p = Path(tmpdir) / "ocr05_test.png"
+        blurred_img.save(str(p))
+        doc = parse(str(p))
+        # Ensure it does NOT detect a fake 49-column table
+        tables = [e for e in doc.content_tree if e.type == "table"]
+        paragraphs = [e for e in doc.content_tree if e.type == "paragraph"]
+        assert len(tables) == 0
+        assert len(paragraphs) >= 1
+
+
+def test_deskew_true_skewed_document_corrected() -> None:
+    """A truly tilted clean document (e.g. 15 degrees) must be detected and corrected."""
+    base_text = "Quarterly Financial Audit Report\nTotal Net Revenue Increased By Twelve Percent"
+    img = Image.new("RGB", (1000, 240), color="white")
+    d = ImageDraw.Draw(img)
+    font = _get_test_font(32)
+    lines = base_text.split("\n")
+    y = 40
+    for line in lines:
+        d.text((50, y), line, fill="black", font=font)
+        y += 65
+
+    rotated_img = img.rotate(-15, resample=Image.BICUBIC, fillcolor="white")
+    cv_img = cv2.cvtColor(np.array(rotated_img), cv2.COLOR_RGB2BGR)
+
+    _, angle = estimate_and_deskew(cv_img, deadband_deg=0.75)
+    assert abs(angle - 15.0) < 2.5

@@ -8,16 +8,20 @@ def estimate_and_deskew(
     img: np.ndarray,
     deadband_deg: float = 0.75,
     max_angle_deg: float = 45.0,
+    min_laplacian_var: float = 100.0,
 ) -> tuple[np.ndarray, float]:
     """
     Detect and correct angular skew in document images using Hough line estimation
-    on text-line contours with table line suppression and deadband protection.
+    on text-line contours with table line suppression, Laplacian blur gating, and deadband protection.
 
     Args:
         img: Input image as BGR, RGB, or Grayscale numpy array.
         deadband_deg: Angles with absolute value below this threshold are ignored
                       to prevent resampling blur on already-straight documents.
         max_angle_deg: Maximum allowed rotation angle (avoids 90/180-deg flipping).
+        min_laplacian_var: Minimum Variance of Laplacian required for deskew estimation.
+                           Heavily blurred images lack sharp high-frequency edge gradients;
+                           estimating angles on blurred letterforms produces systematic false rotation bias.
 
     Returns:
         tuple[np.ndarray, float]: (deskewed_image, estimated_skew_angle_in_degrees)
@@ -35,12 +39,17 @@ def estimate_and_deskew(
     if h_img < 30 or w_img < 30:
         return img, 0.0
 
-    # Step 2: Inverted binary threshold
+    # Step 2: Direct blur detection via Variance of Laplacian
+    lap_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    if lap_var < min_laplacian_var:
+        return img, 0.0
+
+    # Step 3: Inverted binary threshold
     _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-    # Step 3: Mask out long table ruling lines so they do not bias text skew angle
-    h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (max(25, w_img // 20), 1))
-    v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, max(25, h_img // 15)))
+    # Step 4: Mask out long table ruling lines so they do not bias text skew angle
+    h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (max(30, w_img // 20), 1))
+    v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, max(30, h_img // 15)))
     h_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, h_kernel)
     v_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, v_kernel)
     table_lines = cv2.bitwise_or(h_lines, v_lines)
