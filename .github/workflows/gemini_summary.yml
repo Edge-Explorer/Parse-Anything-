@@ -17,11 +17,25 @@ jobs:
     name: Generate Gemini PR Summary & Review
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.pull_request != null &&
-       (startsWith(github.event.comment.body, '/gemini') ||
-        startsWith(github.event.comment.body, '/ci gemini') ||
-        startsWith(github.event.comment.body, '/review')))
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request != null &&
+        github.event.comment.user.type != 'Bot' &&
+        !endsWith(github.event.comment.user.login, '[bot]') &&
+        (
+          contains(github.event.comment.body, '/gemini') ||
+          contains(github.event.comment.body, '/ gemini') ||
+          contains(github.event.comment.body, '/Gemini') ||
+          contains(github.event.comment.body, '/review') ||
+          contains(github.event.comment.body, '/ review') ||
+          contains(github.event.comment.body, '/Review') ||
+          contains(github.event.comment.body, '/ci gemini') ||
+          contains(github.event.comment.body, '/ci-gemini') ||
+          contains(github.event.comment.body, '/explain') ||
+          contains(github.event.comment.body, '/ explain') ||
+          contains(github.event.comment.body, '@gemini')
+        )
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
