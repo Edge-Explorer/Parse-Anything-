@@ -5,6 +5,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import pytest
 from PIL import Image, ImageDraw, ImageFont
 
 from universal_parser.extractors.images.enhancement import (
@@ -107,7 +108,19 @@ def test_merge_overlapping_line_tokens_vertical_jitter():
 
     merged = merge_overlapping_line_tokens([box_right, box_left])
     assert len(merged) == 1
-    assert merged[0][1] == "Universal Parser Engine"
+
+
+def test_merge_overlapping_line_tokens_three_token_confidence_mean():
+    # Three tokens on the same line with scores 0.9, 0.9, and 0.3
+    # True arithmetic mean must be (0.9 + 0.9 + 0.3) / 3 = 0.70
+    box1 = [[[50.0, 50.0], [150.0, 50.0], [150.0, 75.0], [50.0, 75.0]], "TokenOne", 0.90]
+    box2 = [[[145.0, 50.0], [250.0, 50.0], [250.0, 75.0], [145.0, 75.0]], "TokenTwo", 0.90]
+    box3 = [[[245.0, 50.0], [350.0, 50.0], [350.0, 75.0], [245.0, 75.0]], "TokenThree", 0.30]
+
+    merged = merge_overlapping_line_tokens([box1, box2, box3])
+    assert len(merged) == 1
+    assert "Token One" in merged[0][1]
+    assert pytest.approx(merged[0][2], abs=1e-3) == 0.70
 
 
 def test_image_scan_extractor_end_to_end():

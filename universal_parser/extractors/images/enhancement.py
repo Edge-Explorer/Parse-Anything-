@@ -199,7 +199,7 @@ def merge_overlapping_line_tokens(
             {
                 "bbox": (x0, y0, x1, y1),
                 "text": clean_text,
-                "score": float(score),
+                "scores": [float(score)],
                 "cy": (y0 + y1) / 2.0,
             }
         )
@@ -246,17 +246,18 @@ def merge_overlapping_line_tokens(
 
                 prev["bbox"] = (min(px0, cx0), min(py0, cy0), max(px1, cx1), max(py1, cy1))
                 prev["text"] = merged_text
-                prev["score"] = (prev["score"] + b["score"]) / 2.0
+                prev["scores"].extend(b["scores"])
                 prev["cy"] = (prev["bbox"][1] + prev["bbox"][3]) / 2.0
             else:
                 line_merged.append(b)
         merged.extend(line_merged)
 
-    # 3. Normalize whitespace and character boundaries
+    # 3. Normalize whitespace, compute true arithmetic mean confidence, and return
     results: list[tuple[tuple[float, float, float, float], str, float]] = []
     for b in merged:
         norm_text = normalize_ocr_token_text(b["text"])
         if norm_text:
-            results.append((b["bbox"], norm_text, b["score"]))
+            mean_score = sum(b["scores"]) / len(b["scores"]) if b["scores"] else 0.0
+            results.append((b["bbox"], norm_text, float(mean_score)))
 
     return results
