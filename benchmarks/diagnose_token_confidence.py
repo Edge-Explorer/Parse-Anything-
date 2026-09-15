@@ -13,6 +13,11 @@ from rapidocr_onnxruntime import RapidOCR
 from benchmarks.metrics.ocr_eval import compute_cer
 from benchmarks.run_ground_truth_eval import _create_base_ocr_image
 from universal_parser.extractors.images.deskew import estimate_and_deskew
+from universal_parser.extractors.images.enhancement import (
+    enhance_contrast_adaptive,
+    is_low_contrast,
+    merge_overlapping_line_tokens,
+)
 
 
 @dataclass
@@ -35,12 +40,11 @@ def find_best_gt_match(detected_token: str, gt_full_text: str) -> tuple[str, flo
     best_match = ""
     lowest_cer = float("inf")
 
-    # Test single words and multi-word phrases up to length 3
+    # Test single words and multi-word phrases up to full line length
     candidates: list[str] = []
     for i in range(len(gt_words)):
-        for length in (1, 2, 3):
-            if i + length <= len(gt_words):
-                candidates.append(" ".join(gt_words[i : i + length]))
+        for length in range(1, len(gt_words) - i + 1):
+            candidates.append(" ".join(gt_words[i : i + length]))
 
     det_lower = detected_token.lower().strip()
     for cand in candidates:
@@ -152,29 +156,22 @@ def run_confidence_diagnostics() -> list[TokenMatch]:
                 continue
 
             prep_img, _ = estimate_and_deskew(img)
+            if is_low_contrast(prep_img):
+                prep_img = enhance_contrast_adaptive(prep_img)
+
             ocr_results, _ = ocr(prep_img)
             if not ocr_results:
                 continue
 
-            for item in ocr_results:
-                dt_boxes, text, score = item
-                clean_text = text.strip()
-                if not clean_text:
-                    continue
-
-                pts = np.array(dt_boxes, dtype=np.float32)
-                x0 = float(np.min(pts[:, 0]))
-                y0 = float(np.min(pts[:, 1]))
-                x1 = float(np.max(pts[:, 0]))
-                y1 = float(np.max(pts[:, 1]))
-
-                best_match, cer = find_best_gt_match(clean_text, gt_text)
+            pipeline_tokens = merge_overlapping_line_tokens(ocr_results)
+            for (x0, y0, x1, y1), token_text, score in pipeline_tokens:
+                best_match, cer = find_best_gt_match(token_text, gt_text)
                 is_correct = cer == 0.0
 
                 matches.append(
                     TokenMatch(
                         fixture_id=f_id,
-                        token_text=clean_text,
+                        token_text=token_text,
                         gt_matched_text=best_match,
                         confidence=float(score),
                         token_cer=cer,
