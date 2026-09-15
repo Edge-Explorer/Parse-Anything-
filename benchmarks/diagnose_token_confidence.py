@@ -28,9 +28,12 @@ class TokenMatch:
 
 def find_best_gt_match(detected_token: str, gt_full_text: str) -> tuple[str, float]:
     """Find the best matching ground truth word or subphrase for a detected token."""
+    if not gt_full_text.strip():
+        return "", 0.0 if not detected_token.strip() else float("inf")
+
     gt_words = gt_full_text.split()
     best_match = ""
-    lowest_cer = 1.0
+    lowest_cer = float("inf")
 
     # Test single words and multi-word phrases up to length 3
     candidates: list[str] = []
@@ -187,6 +190,11 @@ def print_diagnostic_report(matches: list[TokenMatch]) -> None:
     print("\n" + "=" * 92)
     print(" TOKEN CONFIDENCE & ERROR ALIGNMENT DIAGNOSTIC REPORT")
     print("=" * 92)
+
+    if not matches:
+        print("\nNo tokens extracted for diagnostic.")
+        print("=" * 92 + "\n")
+        return
 
     print(f"\nTotal Extracted Tokens Analyzed: {len(matches)}")
     correct_tokens = [m for m in matches if m.is_correct]
