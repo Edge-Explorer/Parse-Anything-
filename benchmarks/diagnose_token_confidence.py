@@ -36,17 +36,21 @@ def find_best_gt_match(detected_token: str, gt_full_text: str) -> tuple[str, flo
     if not gt_full_text.strip():
         return "", 0.0 if not detected_token.strip() else float("inf")
 
-    gt_words = gt_full_text.split()
     best_match = ""
     lowest_cer = float("inf")
-
-    # Test single words and multi-word phrases up to full line length
-    candidates: list[str] = []
-    for i in range(len(gt_words)):
-        for length in range(1, len(gt_words) - i + 1):
-            candidates.append(" ".join(gt_words[i : i + length]))
-
     det_lower = detected_token.lower().strip()
+
+    # Generate candidate subphrases strictly within each line of ground truth
+    candidates: list[str] = []
+    for line in gt_full_text.splitlines():
+        line_clean = line.strip()
+        if not line_clean:
+            continue
+        words = line_clean.split()
+        for i in range(len(words)):
+            for length in range(1, len(words) - i + 1):
+                candidates.append(" ".join(words[i : i + length]))
+
     for cand in candidates:
         cand_lower = cand.lower().strip()
         cer = compute_cer(cand_lower, det_lower, ignore_case=True)
