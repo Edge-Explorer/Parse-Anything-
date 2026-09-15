@@ -5,8 +5,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import pytest
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 
 from universal_parser.extractors.images.enhancement import (
     enhance_contrast_adaptive,
@@ -118,4 +117,3 @@ def test_image_scan_extractor_end_to_end():
         full_text = " ".join(texts)
         assert "Invoice" in full_text
         assert "Total" in full_text
-

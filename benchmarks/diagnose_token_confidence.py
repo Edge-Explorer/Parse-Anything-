@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import difflib
-import gc
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -107,7 +106,9 @@ def run_confidence_diagnostics() -> list[TokenMatch]:
         p4 = tmp_path / "low_dpi.png"
         base_img = _create_base_ocr_image(base_ocr_text)
         w, h = base_img.size
-        base_img.resize((w // 2, h // 2), Image.BILINEAR).resize((w, h), Image.NEAREST).save(str(p4))
+        base_img.resize((w // 2, h // 2), Image.BILINEAR).resize((w, h), Image.NEAREST).save(
+            str(p4)
+        )
         fixtures.append(("OCR-04", "Low-DPI 100DPI Degraded Scan", p4, base_ocr_text))
 
         # OCR-05: Gaussian Blur
@@ -191,28 +192,40 @@ def print_diagnostic_report(matches: list[TokenMatch]) -> None:
     correct_tokens = [m for m in matches if m.is_correct]
     corrupted_tokens = [m for m in matches if not m.is_correct]
 
-    print(f"  * Perfect Matches (CER == 0.0): {len(correct_tokens)} ({len(correct_tokens)/len(matches)*100:.1f}%)")
-    print(f"  * Corrupted Tokens (CER > 0.0):  {len(corrupted_tokens)} ({len(corrupted_tokens)/len(matches)*100:.1f}%)")
+    print(
+        f"  * Perfect Matches (CER == 0.0): {len(correct_tokens)} ({len(correct_tokens) / len(matches) * 100:.1f}%)"
+    )
+    print(
+        f"  * Corrupted Tokens (CER > 0.0):  {len(corrupted_tokens)} ({len(corrupted_tokens) / len(matches) * 100:.1f}%)"
+    )
 
     # Statistical distribution of confidence scores
     if correct_tokens:
         corr_scores = [m.confidence for m in correct_tokens]
-        print(f"\n[Accurate Tokens Confidence Distribution]")
-        print(f"  Mean: {np.mean(corr_scores):.4f} | Median: {np.median(corr_scores):.4f} | Min: {np.min(corr_scores):.4f} | Max: {np.max(corr_scores):.4f} | Std: {np.std(corr_scores):.4f}")
+        print("\n[Accurate Tokens Confidence Distribution]")
+        print(
+            f"  Mean: {np.mean(corr_scores):.4f} | Median: {np.median(corr_scores):.4f} | Min: {np.min(corr_scores):.4f} | Max: {np.max(corr_scores):.4f} | Std: {np.std(corr_scores):.4f}"
+        )
 
     if corrupted_tokens:
         corrupt_scores = [m.confidence for m in corrupted_tokens]
-        print(f"\n[Corrupted Tokens Confidence Distribution]")
-        print(f"  Mean: {np.mean(corrupt_scores):.4f} | Median: {np.median(corrupt_scores):.4f} | Min: {np.min(corrupt_scores):.4f} | Max: {np.max(corrupt_scores):.4f} | Std: {np.std(corrupt_scores):.4f}")
+        print("\n[Corrupted Tokens Confidence Distribution]")
+        print(
+            f"  Mean: {np.mean(corrupt_scores):.4f} | Median: {np.median(corrupt_scores):.4f} | Min: {np.min(corrupt_scores):.4f} | Max: {np.max(corrupt_scores):.4f} | Std: {np.std(corrupt_scores):.4f}"
+        )
 
     # Inspect corrupted tokens in detail
     print("\n" + "-" * 92)
     print(" DETAILED CORRUPTED TOKENS INSPECTION (WHERE OCR MAKES MISTAKES)")
     print("-" * 92)
-    print(f" {'Fixture':<8} | {'Confidence':<10} | {'Token CER':<10} | {'Detected Text':<28} | {'Matched GT Substring':<24}")
+    print(
+        f" {'Fixture':<8} | {'Confidence':<10} | {'Token CER':<10} | {'Detected Text':<28} | {'Matched GT Substring':<24}"
+    )
     print("-" * 92)
     for m in sorted(corrupted_tokens, key=lambda x: x.confidence):
-        print(f" {m.fixture_id:<8} | {m.confidence:<10.4f} | {m.token_cer*100:<9.1f}% | {m.token_text:<28} | {m.gt_matched_text:<24}")
+        print(
+            f" {m.fixture_id:<8} | {m.confidence:<10.4f} | {m.token_cer * 100:<9.1f}% | {m.token_text:<28} | {m.gt_matched_text:<24}"
+        )
 
     # Threshold Sweep Table
     print("\n" + "=" * 92)
@@ -220,7 +233,9 @@ def print_diagnostic_report(matches: list[TokenMatch]) -> None:
     print("=" * 92)
     print(" Condition: Flag token for Tier 2 Retry if Confidence < Threshold (tau)")
     print("-" * 92)
-    print(f" {'Threshold (tau)':<16} | {'Flagged Tokens':<15} | {'Precision':<11} | {'Recall':<11} | {'F1-Score':<11} | {'False Alarm Rate':<16}")
+    print(
+        f" {'Threshold (tau)':<16} | {'Flagged Tokens':<15} | {'Precision':<11} | {'Recall':<11} | {'F1-Score':<11} | {'False Alarm Rate':<16}"
+    )
     print("-" * 92)
 
     total = len(matches)
@@ -233,7 +248,6 @@ def print_diagnostic_report(matches: list[TokenMatch]) -> None:
         tp = sum(1 for m in flagged if not m.is_correct)
         fp = sum(1 for m in flagged if m.is_correct)
         fn = n_corrupt - tp
-        tn = n_correct - fp
 
         precision = (tp / (tp + fp)) if (tp + fp) > 0 else 1.0
         recall = (tp / (tp + fn)) if (tp + fn) > 0 else 1.0
@@ -241,7 +255,7 @@ def print_diagnostic_report(matches: list[TokenMatch]) -> None:
         false_alarm = (fp / n_correct) if n_correct > 0 else 0.0
 
         print(
-            f"  tau < {tau:<10.2f} | {len(flagged):>4} / {total:<8} | {precision*100:8.1f}% | {recall*100:8.1f}% | {f1:8.3f}   | {false_alarm*100:13.1f}%"
+            f"  tau < {tau:<10.2f} | {len(flagged):>4} / {total:<8} | {precision * 100:8.1f}% | {recall * 100:8.1f}% | {f1:8.3f}   | {false_alarm * 100:13.1f}%"
         )
     print("=" * 92 + "\n")
 
@@ -253,4 +267,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

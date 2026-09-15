@@ -240,4 +240,3 @@ def merge_overlapping_line_tokens(
             results.append((b["bbox"], norm_text, b["score"]))
 
     return results
-
