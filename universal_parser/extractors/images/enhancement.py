@@ -94,13 +94,17 @@ def enhance_contrast_adaptive(
     # Mild unsharp mask to restore soft character edge transitions
     gaussian = cv2.GaussianBlur(gray, (0, 0), 1.5)
     unsharp = cv2.addWeighted(gray, 1.4, gaussian, -0.4, 0)
+    del gray, gaussian
 
     # Adaptive histogram equalization
     clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
     enhanced = clahe.apply(unsharp)
+    del unsharp
 
     if is_bgr:
-        return cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
+        result = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
+        del enhanced
+        return result
     return enhanced
 
 
@@ -167,7 +171,7 @@ def merge_overlapping_line_tokens(
     ocr_results: list[Any],
 ) -> list[tuple[tuple[float, float, float, float], str, float]]:
     """
-    Merge adjacent or horizontally overlapping bounding boxes on the same text line
+    Cluster tokens into text lines and merge horizontally overlapping bounding boxes
     to eliminate duplicate character tokens and fragmented words.
 
     Args:
@@ -196,43 +200,59 @@ def merge_overlapping_line_tokens(
                 "bbox": (x0, y0, x1, y1),
                 "text": clean_text,
                 "score": float(score),
+                "cy": (y0 + y1) / 2.0,
             }
         )
 
-    # Sort boxes top to bottom by y0, then left to right by x0
-    boxes.sort(key=lambda b: (b["bbox"][1], b["bbox"][0]))
+    if not boxes:
+        return []
 
-    merged: list[dict[str, Any]] = []
+    # 1. Cluster boxes into lines based on vertical center overlap
+    boxes.sort(key=lambda b: b["cy"])
+    lines: list[list[dict[str, Any]]] = []
     for b in boxes:
-        if not merged:
-            merged.append(b)
-            continue
+        placed = False
+        for line in lines:
+            line_cy = sum(item["cy"] for item in line) / len(line)
+            line_h = max(item["bbox"][3] - item["bbox"][1] for item in line)
+            if abs(b["cy"] - line_cy) <= max(8.0, line_h * 0.4):
+                line.append(b)
+                placed = True
+                break
+        if not placed:
+            lines.append([b])
 
-        prev = merged[-1]
-        px0, py0, px1, py1 = prev["bbox"]
-        cx0, cy0, cx1, cy1 = b["bbox"]
+    # 2. Sort each line left-to-right by x0 and merge overlapping tokens
+    merged: list[dict[str, Any]] = []
+    for line in lines:
+        line.sort(key=lambda b: b["bbox"][0])
+        line_merged: list[dict[str, Any]] = []
+        for b in line:
+            if not line_merged:
+                line_merged.append(b)
+                continue
 
-        prev_cy = (py0 + py1) / 2.0
-        curr_cy = (cy0 + cy1) / 2.0
-        same_line = abs(prev_cy - curr_cy) < 12.0 and abs((py1 - py0) - (cy1 - cy0)) < 15.0
+            prev = line_merged[-1]
+            px0, py0, px1, py1 = prev["bbox"]
+            cx0, cy0, cx1, cy1 = b["bbox"]
 
-        # Check if boxes overlap horizontally or are adjacent
-        if same_line and cx0 <= px1 + 5.0:
-            prev_t = prev["text"]
-            curr_t = b["text"]
-            # Deduplicate character overlap if last character matches first character
-            if prev_t and curr_t and prev_t[-1].lower() == curr_t[0].lower():
-                merged_text = prev_t[:-1] + " " + curr_t
+            if cx0 <= px1 + 5.0:
+                prev_t = prev["text"]
+                curr_t = b["text"]
+                if prev_t and curr_t and prev_t[-1].lower() == curr_t[0].lower():
+                    merged_text = prev_t[:-1] + " " + curr_t
+                else:
+                    merged_text = prev_t + " " + curr_t
+
+                prev["bbox"] = (min(px0, cx0), min(py0, cy0), max(px1, cx1), max(py1, cy1))
+                prev["text"] = merged_text
+                prev["score"] = (prev["score"] + b["score"]) / 2.0
+                prev["cy"] = (prev["bbox"][1] + prev["bbox"][3]) / 2.0
             else:
-                merged_text = prev_t + " " + curr_t
+                line_merged.append(b)
+        merged.extend(line_merged)
 
-            prev["bbox"] = (min(px0, cx0), min(py0, cy0), max(px1, cx1), max(py1, cy1))
-            prev["text"] = merged_text
-            prev["score"] = (prev["score"] + b["score"]) / 2.0
-        else:
-            merged.append(b)
-
-    # Normalize whitespace and character boundaries
+    # 3. Normalize whitespace and character boundaries
     results: list[tuple[tuple[float, float, float, float], str, float]] = []
     for b in merged:
         norm_text = normalize_ocr_token_text(b["text"])

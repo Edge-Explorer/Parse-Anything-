@@ -96,6 +96,20 @@ def test_merge_overlapping_line_tokens():
     assert merged[1][1] == "High Fidelity Normalization Layer"
 
 
+def test_merge_overlapping_line_tokens_vertical_jitter():
+    # Right-hand token has slightly smaller y0 (48.0) than left-hand token (50.0)
+    box_right = [[[280.0, 48.0], [380.0, 48.0], [380.0, 75.0], [280.0, 75.0]], "Engine", 0.99]
+    box_left = [
+        [[50.0, 50.0], [290.0, 50.0], [290.0, 75.0], [50.0, 75.0]],
+        "UniversalParserE",
+        0.98,
+    ]
+
+    merged = merge_overlapping_line_tokens([box_right, box_left])
+    assert len(merged) == 1
+    assert merged[0][1] == "Universal Parser Engine"
+
+
 def test_image_scan_extractor_end_to_end():
     extractor = ImageScanExtractor()
 
